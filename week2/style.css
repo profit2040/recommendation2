@@ -62,7 +62,7 @@ h1{
 /* Controls */
 .controls{
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr auto auto;
   gap: 12px;
   margin-bottom: 20px;
 }
@@ -88,7 +88,8 @@ h1{
   background: #0d0d10;
 }
 
-#recommend-btn{
+#recommend-btn,
+.cta-link{
   padding: 12px 18px;
   border-radius: 10px;
   border: 1px solid rgba(255,255,255,0.08);
@@ -96,13 +97,19 @@ h1{
   color: #fff;
   font-weight: 600;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
   transition: transform .06s ease, filter .2s ease, background .2s ease;
 }
-#recommend-btn:hover{
+#recommend-btn:hover,
+.cta-link:hover{
   filter: brightness(1.05);
   background: linear-gradient(180deg, var(--primary-600), var(--primary-700));
 }
-#recommend-btn:active{
+#recommend-btn:active,
+.cta-link:active{
   transform: translateY(1px) scale(0.998);
 }
 
