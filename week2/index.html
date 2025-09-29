@@ -2,33 +2,45 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Content-Based Movie Recommender</title>
-  <link rel="stylesheet" href="style.css"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Matrix Factorization Movie Recommender</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="container">
-    <h1>Content-Based Movie Recommender</h1>
-    <p>Select a movie you like, and we'll find similar ones for you!</p>
+  <main class="app-shell">
+    <header class="hero">
+      <h1>Matrix Factorization Movie Recommender</h1>
+      <p>Train a collaborative filtering model in your browser using TensorFlow.js.</p>
+    </header>
 
-    <div class="controls">
-      <select id="movie-select" aria-label="Movie select">
-        <option value="" disabled selected>Select a movie</option>
-      </select>
-      <button id="recommend-btn" onclick="getRecommendations()">Get Recommendations</button>
-      <a id="connect-manager" class="cta-link" href="https://t.me/profit2040" target="_blank" rel="noopener noreferrer">Connect Manager</a>
-    </div>
-
-    <div id="result-box" role="status" aria-live="polite">
-      <p id="result" class="loading">Please wait, loading data...</p>
-
-      <!-- Новый грид для карточек рекомендаций -->
-      <div id="recommendations" class="cards-grid" aria-label="Recommendations grid">
-        <!-- Карточки будут добавляться скриптом -->
+    <section class="panel">
+      <div class="field-group">
+        <label for="user-select">Select User:</label>
+        <select id="user-select" aria-label="Select user">
+          <option value="" disabled selected>Loading users...</option>
+        </select>
       </div>
-    </div>
-  </div>
 
+      <div class="field-group">
+        <label for="movie-select">Select Movie:</label>
+        <select id="movie-select" aria-label="Select movie">
+          <option value="" disabled selected>Loading movies...</option>
+        </select>
+      </div>
+
+      <button id="predict-btn" type="button" disabled>Predict Rating</button>
+
+      <div id="status" class="status-box" role="status" aria-live="polite">
+        Loading MovieLens data...
+      </div>
+
+      <div id="result" class="result-box" aria-live="polite">
+        Model is not ready yet.
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
   <script src="data.js"></script>
   <script src="script.js"></script>
 </body>
