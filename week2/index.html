@@ -28,7 +28,14 @@
         </select>
       </div>
 
-      <button id="predict-btn" type="button" disabled>Predict Rating</button>
+      <button
+        id="predict-btn"
+        type="button"
+        disabled
+        onclick="predictRating()"
+      >
+        Predict Rating
+      </button>
 
       <div id="status" class="status-box" role="status" aria-live="polite">
         Loading MovieLens data...
