@@ -1,4 +1,7 @@
-// Global state shared with script.js
+// The data.js file keeps all MovieLens parsing logic isolated from the UI and
+// TensorFlow-specific code in script.js. Exposing the shared state (movies,
+// ratings, and the lookup tables) via globals keeps the project simple while
+// still making the responsibilities of each file clear.
 let movies = [];
 let ratings = [];
 let userIds = [];
@@ -40,6 +43,8 @@ async function loadData() {
       ratingsResponse.text()
     ]);
 
+    // Both parsers mutate the module-level variables so the rest of the app
+    // can immediately rely on the populated arrays and lookup tables.
     parseItemData(moviesText);
     parseRatingData(ratingsText);
   } catch (error) {
@@ -70,6 +75,9 @@ function parseItemData(text) {
 
     const index = movies.length;
     movieIndexById[id] = index;
+    // Store each movie once while remembering its dense index. TensorFlow.js
+    // embeddings expect inputs in the range [0, inputDim), so we remap the
+    // sparse MovieLens identifiers to contiguous indices here.
     movies.push({ id, title });
   }
 
@@ -102,6 +110,8 @@ function parseRatingData(text) {
     }
 
     userIdSet.add(userId);
+    // Keep the original IDs for the dropdowns while also retaining the raw
+    // rating value so the model can learn directly on the 1–5 star scale.
     ratings.push({ userId, movieId, rating });
   }
 

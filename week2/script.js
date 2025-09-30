@@ -1,3 +1,5 @@
+// The TensorFlow.js model instance is stored globally so the UI handlers and
+// training routine can access the same object without passing it around.
 let model = null;
 let isModelReady = false;
 
@@ -57,6 +59,25 @@ function populateMovieDropdown() {
 }
 
 /**
+ * Randomly select up to `limit` rating entries to keep the demo snappy even on
+ * CPUs without WebGL acceleration. The sampling still covers a broad range of
+ * users and movies, which is sufficient for showcasing the technique.
+ */
+function getTrainingSubset(allRatings, limit) {
+  if (allRatings.length <= limit) {
+    return allRatings;
+  }
+
+  const shuffled = [...allRatings];
+  for (let i = shuffled.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+
+  return shuffled.slice(0, limit);
+}
+
+/**
  * Build the matrix factorisation model.
  * We represent each user and movie as a learnable latent vector (embedding)
  * and take their dot product to estimate the rating. Separate bias embeddings
@@ -67,36 +88,46 @@ function createModel(numUsersValue, numMoviesValue, latentDim = 20) {
   const movieInput = tf.input({ shape: [1], dtype: 'int32', name: 'movie-input' });
 
   const userEmbedding = tf.layers.embedding({
-    inputDim: numUsersValue,
+    // inputDim is (count + 1) to give TensorFlow.js a safe upper bound even if
+    // an index equal to numUsersValue appears. The +1 mirrors how Keras handles
+    // embedding lookup tables.
+    inputDim: numUsersValue + 1,
     outputDim: latentDim,
     embeddingsInitializer: 'heNormal',
     name: 'user-embedding'
   }).apply(userInput);
 
   const movieEmbedding = tf.layers.embedding({
-    inputDim: numMoviesValue,
+    inputDim: numMoviesValue + 1,
     outputDim: latentDim,
     embeddingsInitializer: 'heNormal',
     name: 'movie-embedding'
   }).apply(movieInput);
 
+  // Each embedding has shape [batch, 1, latentDim]. Flattening removes the
+  // singleton dimension so we are left with a simple latent vector per entity.
   const userVector = tf.layers.flatten().apply(userEmbedding);
   const movieVector = tf.layers.flatten().apply(movieEmbedding);
 
+  // Taking the dot product of the two latent vectors is the core of matrix
+  // factorisation—it estimates how strongly the selected user interacts with
+  // the selected movie based on learned preferences.
   const interaction = tf.layers.dot({ axes: 1, name: 'dot-interaction' }).apply([
     userVector,
     movieVector
   ]);
 
+  // Bias embeddings let the network capture global tendencies, such as users
+  // who rate generously or movies that are universally loved.
   const userBias = tf.layers.embedding({
-    inputDim: numUsersValue,
+    inputDim: numUsersValue + 1,
     outputDim: 1,
     embeddingsInitializer: 'zeros',
     name: 'user-bias'
   }).apply(userInput);
 
   const movieBias = tf.layers.embedding({
-    inputDim: numMoviesValue,
+    inputDim: numMoviesValue + 1,
     outputDim: 1,
     embeddingsInitializer: 'zeros',
     name: 'movie-bias'
@@ -105,13 +136,16 @@ function createModel(numUsersValue, numMoviesValue, latentDim = 20) {
   const userBiasFlat = tf.layers.flatten().apply(userBias);
   const movieBiasFlat = tf.layers.flatten().apply(movieBias);
 
+  // The final predicted rating is the dot product plus both bias terms.
   const withUserBias = tf.layers.add().apply([interaction, userBiasFlat]);
-  const prediction = tf.layers.add().apply([withUserBias, movieBiasFlat]);
-  const output = tf.layers.flatten({ name: 'predicted-rating' }).apply(prediction);
+  const output = tf.layers.add({ name: 'predicted-rating' }).apply([
+    withUserBias,
+    movieBiasFlat
+  ]);
 
   return tf.model({
     inputs: [userInput, movieInput],
-    outputs: output,
+    outputs: output
   });
 }
 
@@ -124,32 +158,40 @@ async function trainModel() {
     throw new Error('Ratings data is empty.');
   }
 
+  // Build a fresh model each time trainModel is invoked so we never mix
+  // weights from previous training sessions.
   model = createModel(numUsers, numMovies);
   model.compile({
     optimizer: tf.train.adam(0.001),
     loss: 'meanSquaredError'
   });
 
+  const trainingSampleSize = 4000;
+  const trainingData = getTrainingSubset(ratings, trainingSampleSize);
+
   // Convert the sparse MovieLens identifiers into dense tensors once to
   // keep the training loop efficient and avoid extra allocations per epoch.
   const userTensor = tf.tensor2d(
-    ratings.map((entry) => entry.userIndex),
-    [ratings.length, 1],
+    trainingData.map((entry) => entry.userIndex),
+    [trainingData.length, 1],
     'int32'
   );
   const movieTensor = tf.tensor2d(
-    ratings.map((entry) => entry.movieIndex),
-    [ratings.length, 1],
+    trainingData.map((entry) => entry.movieIndex),
+    [trainingData.length, 1],
     'int32'
   );
-  const ratingTensor = tf.tensor1d(
-    ratings.map((entry) => entry.rating),
+  const ratingTensor = tf.tensor2d(
+    trainingData.map((entry) => entry.rating),
+    [trainingData.length, 1],
     'float32'
   );
 
-  const epochs = 8;
+  const epochs = 2;
   const batchSize = 128;
 
+  // Train the embeddings jointly. A small epoch count keeps the demo quick
+  // while still converging to reasonable rating estimates.
   await model.fit([userTensor, movieTensor], ratingTensor, {
     epochs,
     batchSize,
@@ -164,6 +206,8 @@ async function trainModel() {
     }
   });
 
+  // These tensors are no longer needed once the model has been fitted, so we
+  // dispose them manually to avoid unnecessary memory growth in long sessions.
   userTensor.dispose();
   movieTensor.dispose();
   ratingTensor.dispose();
@@ -205,6 +249,8 @@ async function predictRating() {
     return predictionTensor.dataSync()[0];
   });
 
+  // Clamp to the 1–5 star range so outliers produced early in training do not
+  // confuse the user-facing UI.
   const clampedRating = Math.min(5, Math.max(1, rawRating));
 
   const movieTitle = movies.find((movie) => movie.id === movieId)?.title ?? 'the selected movie';
