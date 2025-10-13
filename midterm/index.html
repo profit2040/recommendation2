@@ -1,428 +1,498 @@
-<!--
-index.html
-Static demo UI for the prototype Fashion RecSys (Content-based + item-item similarity).
-Drop this file into a GitHub Pages repo (root or docs/) and open the page.
-
-Features:
-- Small in-browser dataset (catalog) as JS array (can replace with your full data later).
-- Builds TF-IDF on productDisplayName + one-hot for key categorical features.
-- Cosine similarity for candidate generation + simple re-ranking using popularity.
-- Tunable alpha slider (alpha blends similarity and popularity).
-- Explainable "reason tags" (same category, same color, shared tokens).
-- Liquid / frosted glass UI (pure CSS).
-
-This is a self-contained static demo — no backend required.
--->
-
 <!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Fashion RecSys — Prototype UI (Liquid Glass)</title>
-
 <style>
-  /* Page background */
   :root{
-    --bg1: #0f1724;
-    --bg2: #07203b;
-    --accent: rgba(255,255,255,0.08);
-    --glass: rgba(255,255,255,0.10);
-    --glass-strong: rgba(255,255,255,0.14);
-    --text: #f8fafc;
-    --muted: #cbd5e1;
-    --accent-color: #7dd3fc;
+    --bg:#0f1724;
+    --card: rgba(255,255,255,0.06);
+    --card-strong: rgba(255,255,255,0.08);
+    --accent: rgba(255,255,255,0.14);
+    --glass-border: rgba(255,255,255,0.12);
+    --glass-highlight: rgba(255,255,255,0.04);
+    --text: #e6eef8;
+    --muted: #b7c2d6;
+    --accent-color: #8ad4ff;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
   }
-  html,body{height:100%;margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;}
-  body{
+  html,body{height:100%;margin:0;background:
+    radial-gradient(1200px 600px at 10% 10%, rgba(138,212,255,0.06), transparent 10%),
+    radial-gradient(800px 400px at 90% 90%, rgba(255,183,178,0.03), transparent 6%),
+    var(--bg);
     color:var(--text);
-    background: radial-gradient(1200px 600px at 10% 10%, rgba(45,55,72,0.75), transparent 10%),
-                radial-gradient(1000px 500px at 90% 90%, rgba(2,6,23,0.6), transparent 10%),
-                linear-gradient(180deg,var(--bg1),var(--bg2));
     -webkit-font-smoothing:antialiased;
-    display:flex;flex-direction:column;align-items:center;padding:32px 18px;
+    -moz-osx-font-smoothing:grayscale;
   }
-
-  /* Container */
   .wrap{
-    width:100%;max-width:1100px;
-    display:grid;
-    grid-template-columns: 360px 1fr;
-    gap:24px;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:48px 20px;
   }
-
-  /* Glass card */
   .panel{
-    background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));
-    border:1px solid var(--glass);
-    border-radius:14px;
-    padding:20px;
-    box-shadow: 0 8px 30px rgba(2,6,23,0.6);
-    backdrop-filter: blur(10px) saturate(120%);
+    width:1100px;
+    max-width:100%;
+    display:grid;
+    grid-template-columns: 380px 1fr;
+    gap:28px;
   }
 
-  header.app-title{
-    width:100%;max-width:1100px;margin-bottom:18px;
-    display:flex;align-items:center;gap:16px;
+  /* Liquid glass card style */
+  .glass{
+    background: linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0.01));
+    border-radius:18px;
+    padding:22px;
+    box-shadow: 0 8px 40px rgba(3,7,18,0.6), inset 0 1px 0 var(--glass-highlight);
+    border:1px solid var(--glass-border);
+    backdrop-filter: blur(8px) saturate(120%);
+    -webkit-backdrop-filter: blur(8px) saturate(120%);
   }
-  .logo{
-    width:56px;height:56px;border-radius:12px;
-    background: linear-gradient(135deg,#6ee7b7,#7dd3fc);
-    display:flex;align-items:center;justify-content:center;color:#063; font-weight:700;
-    box-shadow: 0 6px 20px rgba(125,211,252,0.08), inset 0 -6px 18px rgba(0,0,0,0.06);
-  }
-  h1{font-size:18px;margin:0}
-  p.lead{margin:0;color:var(--muted);font-size:13px}
 
-  /* Left column controls */
-  .controls { display:flex;flex-direction:column; gap:12px; }
-  label.small{font-size:12px;color:var(--muted);display:block;margin-bottom:6px}
-  select, button, input[type=range]{
-    width:100%;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);
+  /* Left column: controls + seed product */
+  .left{ display:flex; flex-direction:column; gap:18px; }
+  .logo{ font-weight:700; font-size:18px; color:var(--accent-color); letter-spacing:0.6px; }
+  .small{ font-size:13px; color:var(--muted); margin-top:6px; }
+
+  .seed{
+    display:flex; gap:14px; align-items:center;
+  }
+  .seed-visual{
+    width:92px; height:92px; border-radius:12px;
+    background:linear-gradient(135deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    display:flex; align-items:center; justify-content:center; font-weight:600;
+    color:var(--muted);
+    border:1px solid rgba(255,255,255,0.03);
+  }
+  .seed-info{ flex:1; }
+  .product-title{ font-weight:700; font-size:15px; color:var(--text); margin-bottom:6px; }
+  .meta{ font-size:13px; color:var(--muted); }
+
+  .controls{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  button.btn{
+    background:linear-gradient(180deg, rgba(138,212,255,0.08), rgba(138,212,255,0.03));
+    color:var(--text); border:0; padding:10px 14px; border-radius:12px; cursor:pointer;
+    font-weight:600; letter-spacing:0.2px; box-shadow: 0 6px 18px rgba(10,16,37,0.45);
+    transition:transform .12s ease, box-shadow .12s ease;
+  }
+  button.btn.secondary{
+    background: transparent; border:1px solid rgba(255,255,255,0.04);
+  }
+  button.btn:active{ transform:translateY(1px); }
+
+  .uploader{ font-size:13px; color:var(--muted); }
+  input[type=file]{ display:none; }
+
+  /* Right column: recommendations */
+  .right{ display:flex; flex-direction:column; gap:10px; }
+  .topbar{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .title{ font-size:20px; font-weight:700; color:var(--text); }
+  .subtitle{ font-size:13px; color:var(--muted); }
+
+  .rec-grid{ display:grid; grid-template-columns: repeat(3, 1fr); gap:14px; margin-top:8px; }
+  .card{
+    padding:12px; border-radius:12px; min-height:130px;
     background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-    color:var(--text);outline:none;font-size:14px;
+    border:1px solid rgba(255,255,255,0.03);
+    display:flex; flex-direction:column; gap:8px;
   }
-  .btn{
-    padding:10px 12px;border-radius:10px;border:none;cursor:pointer;
-    background: linear-gradient(90deg,#7dd3fc,#60a5fa);
-    color:#04283a;font-weight:600;
-    box-shadow:0 8px 18px rgba(96,165,250,0.12);
-  }
-  .small-muted{font-size:12px;color:var(--muted);}
+  .card h4{ margin:0; font-size:14px; color:var(--text); }
+  .card p{ margin:0; font-size:12px; color:var(--muted); line-height:1.25; }
+  .tags{ display:flex; gap:8px; flex-wrap:wrap; margin-top:auto; }
+  .tag{ font-size:11px; background:rgba(255,255,255,0.02); padding:6px 8px; border-radius:10px; color:var(--muted); border:1px solid rgba(255,255,255,0.02); }
 
-  /* Right column results area */
-  .results{
-    display:flex;flex-direction:column; gap:12px;
-  }
-  .seed-card, .rec-item{
-    display:flex;gap:12px;align-items:center;
-    border-radius:12px;padding:12px;border:1px solid rgba(255,255,255,0.04);
-    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-  }
-  .thumb{
-    width:84px;height:84px;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
-    display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;
-    font-size:13px;
-    flex:0 0 84px;
-    border: 1px solid rgba(255,255,255,0.03);
-  }
-  .meta{flex:1}
-  .meta h3{margin:0;font-size:15px}
-  .meta p{margin:4px 0 0 0;color:var(--muted);font-size:13px}
-  .tags{margin-top:8px;display:flex;flex-wrap:wrap;gap:8px}
-  .tag{
-    font-size:12px;padding:6px 8px;border-radius:999px;background:rgba(255,255,255,0.04);color:var(--muted);
-    border:1px solid rgba(255,255,255,0.02);
-  }
-  .score{font-weight:700;color:var(--accent-color);}
+  .footer-note{ font-size:12px; color:var(--muted); margin-top:8px; }
 
-  /* footer controls */
-  .controls-row{display:flex;gap:8px;align-items:center;margin-top:6px}
-  .alpha-value{min-width:38px;text-align:right;font-weight:700;color:var(--muted);font-size:13px}
-
-  /* responsive */
-  @media (max-width:960px){
-    .wrap{grid-template-columns: 1fr; }
+  /* mobile responsiveness */
+  @media (max-width:920px){
+    .panel{ grid-template-columns: 1fr; }
+    .rec-grid{ grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width:520px){
+    .rec-grid{ grid-template-columns: 1fr; }
   }
 </style>
 </head>
 <body>
-  <header class="app-title">
-    <div class="logo">FR</div>
-    <div>
-      <h1>Fashion RecSys — Prototype UI</h1>
-      <p class="lead">Content-based + item-item similarity • Explainable recommendations</p>
-    </div>
-  </header>
-
-  <main class="wrap">
-    <!-- Left control panel -->
-    <section class="panel">
-      <div class="controls">
-        <div>
-          <label class="small">Select seed product (or pick random)</label>
-          <select id="seedSelect"></select>
-        </div>
-
-        <div>
-          <label class="small">Number of recommendations</label>
-          <select id="kSelect">
-            <option>3</option><option selected>5</option><option>8</option>
-          </select>
-        </div>
-
-        <div>
-          <label class="small">Combine similarity & popularity (α)</label>
-          <input id="alpha" type="range" min="0" max="1" step="0.05" value="0.8">
-          <div class="controls-row">
-            <div class="small-muted">α = weight(similarity)</div>
-            <div style="flex:1"></div>
-            <div class="alpha-value" id="alphaVal">0.80</div>
-          </div>
-        </div>
-
-        <div>
-          <label class="small">Quick actions</label>
-          <div style="display:flex;gap:8px;">
-            <button class="btn" id="btnRecommend">Recommend</button>
-            <button style="padding:10px 12px;border-radius:10px;border:none;background:transparent;color:var(--muted);" id="btnRandom">Random</button>
-          </div>
-        </div>
-
-        <div>
-          <p class="small-muted">Notes: This demo builds in-browser TF-IDF and categorical encodings for each item. Recommendations are cosine-similar items re-ranked by popularity. Reason tags are shown per item for explainability.</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- Right results panel -->
-    <section class="panel results">
+<div class="wrap">
+  <div class="panel">
+    <!-- LEFT -->
+    <div class="glass left">
       <div>
-        <div class="seed-card" id="seedCard" aria-live="polite">
-          <div class="thumb" id="seedThumb">SEED</div>
-          <div class="meta">
-            <h3 id="seedTitle">Select a product</h3>
-            <p id="seedMeta" class="small-muted">metadata</p>
-            <div class="tags" id="seedTags"></div>
+        <div class="logo">Fashion RecSys (Prototype)</div>
+        <div class="small">Content-based item similarity • TF-IDF + categorical features • cosine similarity</div>
+      </div>
+
+      <!-- Seed product -->
+      <div class="glass" style="padding:14px;">
+        <div class="seed">
+          <div class="seed-visual" id="seed-image">IMG</div>
+          <div class="seed-info">
+            <div class="product-title" id="seed-title">Turtle Check Men Navy Blue Shirt</div>
+            <div class="meta" id="seed-meta">Topwear · Shirts · Navy Blue · Casual · 2011</div>
           </div>
         </div>
+
+        <div style="height:12px"></div>
+
+        <div class="controls">
+          <button class="btn" id="btn-rand">Pick random seed</button>
+          <button class="btn" id="btn-recommend">Recommend</button>
+          <label class="btn secondary" title="Upload CSV">
+            Upload CSV
+            <input type="file" id="csv-upload" accept=".csv,text/csv" />
+          </label>
+          <button class="btn secondary" id="btn-reset">Reset sample</button>
+        </div>
+
+        <div style="height:14px"></div>
+
+        <div class="uploader">Tip: upload your `styles.csv` (10 columns). UI will compute recommendations client-side.</div>
       </div>
 
-      <div id="recsContainer">
-        <!-- recommendations appended here -->
+      <div style="height:10px"></div>
+
+      <div class="glass" style="padding:12px;">
+        <div style="font-size:13px;font-weight:700;color:var(--text)">How it works</div>
+        <div class="small">We build an item vector from categorical one-hots + TF-IDF on title, compute cosine similarity and show top-5 items. Re-rank uses a simple popularity fallback.</div>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="glass right">
+      <div class="topbar">
+        <div>
+          <div class="title">Recommendations</div>
+          <div class="subtitle">Top 5 similar items (reason tags indicate simple feature overlap).</div>
+        </div>
+        <div class="small" id="stats">Dataset: sample (12 items)</div>
       </div>
 
-    </section>
-  </main>
+      <div id="rec-grid" class="rec-grid">
+        <!-- recommended cards rendered here -->
+      </div>
+
+      <div class="footer-note">Small prototype — replace sample data by uploading your dataset. All processing runs in browser.</div>
+    </div>
+  </div>
+</div>
 
 <script>
 /*
-  Demo dataset (tiny sample). Replace or expand with full catalog JSON if hosting elsewhere.
-  Fields: id, gender, masterCategory, subCategory, articleType, baseColour, season, year, usage, productDisplayName, popularity
+  Minimal in-browser recommender:
+  - Sample dataset (replace or upload CSV)
+  - Build vocabulary and TF-IDF for productDisplayName
+  - Encode categorical features as simple one-hot indices (dynamically)
+  - Create sparse vectors as plain JS objects {index: value}
+  - Cosine similarity between sparse vectors
+  - Recommend top-N excluding the seed item
+  - Show simple reason tags (shared color/subCategory)
 */
-const CATALOG = [
-  {id: "15970", gender:"Men", masterCategory:"Apparel", subCategory:"Topwear", articleType:"Shirts", baseColour:"Navy Blue", season:"Fall", year:2011, usage:"Casual", productDisplayName:"Turtle Check Men Navy Blue Shirt", popularity: 120},
-  {id: "39386", gender:"Men", masterCategory:"Apparel", subCategory:"Bottomwear", articleType:"Jeans", baseColour:"Blue", season:"Summer", year:2012, usage:"Casual", productDisplayName:"Peter England Men Party Blue Jeans", popularity: 200},
-  {id: "59263", gender:"Women", masterCategory:"Accessories", subCategory:"Watches", articleType:"Watches", baseColour:"Silver", season:"Winter", year:2016, usage:"Casual", productDisplayName:"Titan Women Silver Watch", popularity: 180},
-  {id: "21379", gender:"Men", masterCategory:"Apparel", subCategory:"Bottomwear", articleType:"Track Pants", baseColour:"Black", season:"Fall", year:2011, usage:"Casual", productDisplayName:"Manchester United Men Solid Black Track Pants", popularity: 95},
-  {id: "53759", gender:"Men", masterCategory:"Apparel", subCategory:"Topwear", articleType:"Tshirts", baseColour:"Grey", season:"Summer", year:2012, usage:"Casual", productDisplayName:"Puma Men Grey T-shirt", popularity: 300},
-  {id: "1855", gender:"Men", masterCategory:"Apparel", subCategory:"Topwear", articleType:"Tshirts", baseColour:"Grey", season:"Summer", year:2011, usage:"Casual", productDisplayName:"Inkfruit Mens Chain Reaction T-shirt", popularity: 80},
-  {id: "30805", gender:"Men", masterCategory:"Apparel", subCategory:"Topwear", articleType:"Shirts", baseColour:"Green", season:"Summer", year:2012, usage:"Ethnic", productDisplayName:"Fabindia Men Striped Green Shirt", popularity: 65},
-  {id: "26960", gender:"Women", masterCategory:"Apparel", subCategory:"Topwear", articleType:"Shirts", baseColour:"Purple", season:"Summer", year:2012, usage:"Casual", productDisplayName:"Jealous 21 Women Purple Shirt", popularity: 42},
-  {id: "29114", gender:"Men", masterCategory:"Accessories", subCategory:"Socks", articleType:"Socks", baseColour:"Navy Blue", season:"Summer", year:2012, usage:"Casual", productDisplayName:"Puma Men Pack of 3 Socks", popularity: 50},
-  {id: "30039", gender:"Men", masterCategory:"Accessories", subCategory:"Watches", articleType:"Watches", baseColour:"Black", season:"Winter", year:2016, usage:"Casual", productDisplayName:"Skagen Men Black Watch", popularity: 130},
-  {id: "9204", gender:"Men", masterCategory:"Footwear", subCategory:"Shoes", articleType:"Casual Shoes", baseColour:"Black", season:"Summer", year:2011, usage:"Casual", productDisplayName:"Puma Men Future Cat Remix SF Black Casual Shoes", popularity: 220}
+
+// ---------------- Sample dataset (small) ----------------
+let items = [
+  {"id":"15970","gender":"Men","masterCategory":"Apparel","subCategory":"Topwear","articleType":"Shirts","baseColour":"Navy Blue","season":"Fall","year":"2011","usage":"Casual","productDisplayName":"Turtle Check Men Navy Blue Shirt"},
+  {"id":"39386","gender":"Men","masterCategory":"Apparel","subCategory":"Bottomwear","articleType":"Jeans","baseColour":"Blue","season":"Summer","year":"2012","usage":"Casual","productDisplayName":"Peter England Men Party Blue Jeans"},
+  {"id":"59263","gender":"Women","masterCategory":"Accessories","subCategory":"Watches","articleType":"Watches","baseColour":"Silver","season":"Winter","year":"2016","usage":"Casual","productDisplayName":"Titan Women Silver Watch"},
+  {"id":"21379","gender":"Men","masterCategory":"Apparel","subCategory":"Bottomwear","articleType":"Track Pants","baseColour":"Black","season":"Fall","year":"2011","usage":"Casual","productDisplayName":"Manchester United Men Solid Black Track Pants"},
+  {"id":"53759","gender":"Men","masterCategory":"Apparel","subCategory":"Topwear","articleType":"Tshirts","baseColour":"Grey","season":"Summer","year":"2012","usage":"Casual","productDisplayName":"Puma Men Grey T-shirt"},
+  {"id":"1855","gender":"Men","masterCategory":"Apparel","subCategory":"Topwear","articleType":"Tshirts","baseColour":"Grey","season":"Summer","year":"2011","usage":"Casual","productDisplayName":"Inkfruit Mens Chain Reaction T-shirt"},
+  {"id":"30805","gender":"Men","masterCategory":"Apparel","subCategory":"Topwear","articleType":"Shirts","baseColour":"Green","season":"Summer","year":"2012","usage":"Ethnic","productDisplayName":"Fabindia Men Striped Green Shirt"},
+  {"id":"26960","gender":"Women","masterCategory":"Apparel","subCategory":"Topwear","articleType":"Shirts","baseColour":"Purple","season":"Summer","year":"2012","usage":"Casual","productDisplayName":"Jealous 21 Women Purple Shirt"},
+  {"id":"29114","gender":"Men","masterCategory":"Accessories","subCategory":"Socks","articleType":"Socks","baseColour":"Navy Blue","season":"Summer","year":"2012","usage":"Casual","productDisplayName":"Puma Men Pack of 3 Socks"},
+  {"id":"30039","gender":"Men","masterCategory":"Accessories","subCategory":"Watches","articleType":"Watches","baseColour":"Black","season":"Winter","year":"2016","usage":"Casual","productDisplayName":"Skagen Men Black Watch"},
+  {"id":"9204","gender":"Men","masterCategory":"Footwear","subCategory":"Shoes","articleType":"Casual Shoes","baseColour":"Black","season":"Summer","year":"2011","usage":"Casual","productDisplayName":"Puma Men Future Cat Remix SF Black Casual Shoes"},
+  {"id":"11111","gender":"Women","masterCategory":"Apparel","subCategory":"Bottomwear","articleType":"Jeans","baseColour":"Blue","season":"Summer","year":"2013","usage":"Casual","productDisplayName":"Levis Women Classic Blue Jeans"}
 ];
 
-/* Utility: tokenize simple */
-function tokenize(text){
-  return (text || "").toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+// Popularity fallback: if you have a field with counts, map into popularity. For demo we compute popularity by product name frequency
+function computePopularity(items){
+  const freq = {};
+  items.forEach(it => { freq[it.productDisplayName] = (freq[it.productDisplayName]||0)+1; });
+  // normalize 0..1
+  const maxv = Math.max(...Object.values(freq));
+  items.forEach(it => it._popularity = (freq[it.productDisplayName]||0) / (maxv || 1));
+}
+computePopularity(items);
+
+// ---------- Utility: CSV parser (handles quoted fields) ----------
+function parseCSV(text){
+  const rows = [];
+  const lines = text.split(/\r\n|\n/);
+  for(let r=0;r<lines.length;r++){
+    let line = lines[r];
+    if(!line) continue;
+    const cols = [];
+    let cur = "", inQuotes=false;
+    for(let i=0;i<line.length;i++){
+      const ch = line[i];
+      if(ch === '"' ){
+        if(inQuotes && line[i+1] === '"'){ cur += '"'; i++; continue; }
+        inQuotes = !inQuotes; continue;
+      }
+      if(ch === ',' && !inQuotes){ cols.push(cur); cur=""; continue; }
+      cur += ch;
+    }
+    cols.push(cur);
+    rows.push(cols);
+  }
+  // header
+  const header = rows[0].map(h=>h.trim());
+  const out = [];
+  for(let i=1;i<rows.length;i++){
+    const row = rows[i];
+    if(row.length === 0) continue;
+    const obj = {};
+    for(let j=0;j<header.length;j++){
+      obj[header[j]] = row[j] !== undefined ? row[j] : "";
+    }
+    out.push(obj);
+  }
+  return out;
 }
 
-/* Build TF-IDF vocabulary and vectors for productDisplayName */
-function buildTfIdf(catalog){
-  const docs = catalog.map(it => tokenize(it.productDisplayName));
-  const vocab = {};
-  docs.forEach(tokens => tokens.forEach(t => { if(!(t in vocab)) vocab[t]=Object.keys(vocab).length; }));
-  const V = Object.keys(vocab).length;
-  // compute idf
-  const df = new Array(V).fill(0);
-  docs.forEach(tokens => {
-    const seen = new Set(tokens);
-    seen.forEach(t => { df[vocab[t]] += 1; });
-  });
-  const idf = df.map(d => Math.log((1 + docs.length) / (1 + d)) + 1);
+// ---------------- Vectorizer (TF-IDF + categorical encoding) ----------------
+function tokenize(s){
+  if(!s) return [];
+  return s.toLowerCase().replace(/[^a-z0-9\u00C0-\u017F\s-]/g,' ').split(/\s+/).filter(Boolean);
+}
 
-  // compute tf-idf vectors (dense arrays)
-  const tfidf = docs.map(tokens => {
-    const vec = new Array(V).fill(0);
-    if(tokens.length===0) return vec;
-    const counts = {};
-    tokens.forEach(t => counts[t] = (counts[t]||0) + 1);
-    Object.keys(counts).forEach(t => {
-      const idx = vocab[t];
-      vec[idx] = (counts[t] / tokens.length) * idf[idx];
-    });
+function buildVocabulary(docs){
+  const df = {};
+  docs.forEach(doc => {
+    const terms = new Set(tokenize(doc));
+    terms.forEach(t => df[t] = (df[t]||0)+1);
+  });
+  return df;
+}
+
+function computeTFIDF(docs){
+  const N = docs.length;
+  const df = buildVocabulary(docs);
+  const idf = {};
+  Object.keys(df).forEach(t => idf[t] = Math.log( (N + 1) / (df[t] + 1) ) + 1 );
+  const tfidfDocs = docs.map(doc => {
+    const tokens = tokenize(doc);
+    const tf = {};
+    tokens.forEach(t => tf[t] = (tf[t]||0) + 1);
+    const maxf = Math.max(...Object.values(tf), 1);
+    const vec = {};
+    Object.keys(tf).forEach(t => vec[t] = (tf[t]/maxf) * (idf[t] || 0));
     return vec;
   });
-
-  // normalize tfidf vectors
-  const norms = tfidf.map(v => Math.sqrt(v.reduce((s,x)=>s + x*x, 0)));
-  const normalized = tfidf.map((v,i) => {
-    const n = norms[i] || 1;
-    return v.map(x => x / n);
-  });
-
-  return {vocab, idf, tfidf:normalized, V};
+  return {tfidfDocs, idf};
 }
 
-/* One-hot categorical encoders */
-function buildCategoryEncoders(catalog, fields){
+// Categorical encoder: map unique values to integer indices
+function buildCategoricalMaps(items, fields){
   const maps = {};
   fields.forEach(f => {
-    const set = new Set(catalog.map(it => (it[f] || "UNKNOWN")));
-    maps[f] = Array.from(set);
+    maps[f] = {};
+    let idx=0;
+    items.forEach(it => {
+      const v = (it[f]||"").toString().trim() || "UNKNOWN";
+      if(!(v in maps[f])){ maps[f][v] = idx++; }
+    });
   });
   return maps;
 }
-function encodeCategories(item, maps){
-  const vec = [];
-  Object.keys(maps).forEach(f => {
-    maps[f].forEach(val => vec.push((item[f] || "UNKNOWN") === val ? 1 : 0));
+
+// Build sparse vector as plain object {index:value}
+// We'll map categorical dims into ranges, and then add TF-IDF term dims keyed by string (prefixed)
+function buildVectors(items){
+  // prepare documents for TF-IDF
+  const docs = items.map(it => it.productDisplayName || "");
+  const {tfidfDocs, idf} = computeTFIDF(docs);
+  // categorical maps
+  const catFields = ['masterCategory','subCategory','articleType','baseColour','season','usage'];
+  const catMaps = buildCategoricalMaps(items, catFields);
+  // compute index base offsets
+  const offsets = {};
+  let base=0;
+  catFields.forEach(f => { offsets[f]=base; base += Object.keys(catMaps[f]).length; });
+  const tfPrefix = "T_"; // TF-IDF terms use string keys with prefix, keep them separate
+
+  // build vectors
+  items.forEach((it,i) => {
+    const vec = {}; // sparse
+    // categorical one-hot values
+    catFields.forEach(f => {
+      const v = (it[f]||"").toString().trim() || "UNKNOWN";
+      const idx = offsets[f] + (catMaps[f][v] !== undefined ? catMaps[f][v] : 0);
+      vec[idx] = 1; // binary presence
+    });
+    // TF-IDF terms (we will keep them under string keys)
+    const tfidf = tfidfDocs[i];
+    Object.keys(tfidf).forEach(term => {
+      vec[tfPrefix + term] = tfidf[term];
+    });
+    // append popularity as a scalar dimension (use negative index name)
+    vec['_pop'] = it._popularity || 0;
+    it._vector = vec;
   });
-  return vec;
+
+  // return metadata so we can inspect offsets if needed
+  return {catFields, catMaps, offsets, idf};
 }
 
-/* Vector build: concat tfidf + categorical one-hot */
-function buildItemVectors(catalog){
-  const tf = buildTfIdf(catalog);
-  const cats = ['masterCategory','subCategory','articleType','season','usage','baseColour'];
-  const maps = buildCategoryEncoders(catalog, cats);
-
-  const catDim = Object.values(maps).reduce((s,a)=>s+a.length,0);
-  const vectors = catalog.map((it,idx) => {
-    const tfv = tf.tfidf[idx]; // already normalized
-    const catv = encodeCategories(it, maps);
-    // concat
-    const combined = tfv.concat(catv);
-    // normalize combined vector for cosine similarity
-    const norm = Math.sqrt(combined.reduce((s,x)=>s + x*x, 0)) || 1;
-    const normalized = combined.map(x => x / norm);
-    return {item:it, vec:normalized, tf:tftf=tfv, cat:catv};
-  });
-
-  // normalize popularity to [0,1]
-  const pops = catalog.map(it => it.popularity || 0);
-  const maxp = Math.max(...pops,1);
-  const minp = Math.min(...pops,0);
-  const popNorm = catalog.map(it => (it.popularity - minp)/(maxp - minp || 1));
-
-  vectors.forEach((v,i) => v.popularityNorm = popNorm[i]);
-
-  return {vectors, tfModel:tf, categoryMaps:maps};
-}
-
-/* Cosine similarity (dot product because vectors are normalized) */
-function cosine(v1, v2){
-  const n = Math.min(v1.length, v2.length);
-  let s = 0;
-  for(let i=0;i<n;i++) s += (v1[i]||0) * (v2[i]||0);
+function dotSparse(a,b){
+  // a and b are objects; keys may be numeric or string; compute dot product
+  let s=0;
+  // iterate over smaller object
+  const aKeys = Object.keys(a);
+  const bKeys = Object.keys(b);
+  if(aKeys.length <= bKeys.length){
+    for(const k of aKeys){
+      if(b[k] !== undefined) s += a[k] * b[k];
+    }
+  } else {
+    for(const k of bKeys){
+      if(a[k] !== undefined) s += a[k] * b[k];
+    }
+  }
   return s;
 }
-
-/* Reason tags builder */
-function reasonTags(seed, candidate){
-  const tags = [];
-  if(seed.masterCategory === candidate.masterCategory) tags.push("Same category");
-  if(seed.subCategory === candidate.subCategory) tags.push("Same subcategory");
-  if(seed.baseColour === candidate.baseColour) tags.push("Same color");
-  if(seed.articleType === candidate.articleType) tags.push("Same article type");
-  // shared token in product name?
-  const sset = new Set(tokenize(seed.productDisplayName));
-  const cset = new Set(tokenize(candidate.productDisplayName));
-  const shared = [...sset].filter(t => cset.has(t));
-  if(shared.length > 0) tags.push("Shared terms: " + shared.slice(0,3).join(", "));
-  return tags;
+function normSparse(a){
+  let s=0;
+  for(const k in a) s += a[k]*a[k];
+  return Math.sqrt(s);
+}
+function cosine(a,b){
+  const num = dotSparse(a,b);
+  const na = normSparse(a);
+  const nb = normSparse(b);
+  if(na === 0 || nb===0) return 0;
+  return num/(na*nb);
 }
 
-/* Build model (vectors) */
-const MODEL = buildItemVectors(CATALOG);
+// ---------------- Recommendation core ----------------
+let modelMeta = null;
+function buildModel(){
+  modelMeta = buildVectors(items);
+  document.getElementById('stats').innerText = `Dataset: ${items.length} items • Vocabulary size ≈ ${Object.keys(modelMeta.idf).length} terms`;
+}
 
-/* UI helpers */
-const seedSelect = document.getElementById('seedSelect');
-const kSelect = document.getElementById('kSelect');
-const alphaInput = document.getElementById('alpha');
-const alphaVal = document.getElementById('alphaVal');
-const btnRecommend = document.getElementById('btnRecommend');
-const btnRandom = document.getElementById('btnRandom');
-const seedCard = document.getElementById('seedCard');
-const seedThumb = document.getElementById('seedThumb');
-const seedTitle = document.getElementById('seedTitle');
-const seedMeta = document.getElementById('seedMeta');
-const seedTags = document.getElementById('seedTags');
-const recsContainer = document.getElementById('recsContainer');
-
-function populateSeedOptions(){
-  seedSelect.innerHTML = '';
-  MODEL.vectors.forEach((v,i) => {
-    const opt = document.createElement('option');
-    opt.value = i;
-    opt.textContent = `${v.item.productDisplayName} — ${v.item.masterCategory}/${v.item.subCategory}`;
-    seedSelect.appendChild(opt);
+function recommend(seedId, topN=5){
+  const seed = items.find(it => it.id == seedId) || items[0];
+  if(!seed || !seed._vector) return [];
+  const sims = [];
+  items.forEach(it => {
+    if(it.id == seed.id) return;
+    const sim = cosine(seed._vector, it._vector);
+    // simple re-rank: combine sim and popularity (alpha=0.8)
+    const alpha = 0.85;
+    const score = alpha * sim + (1-alpha) * (it._popularity || 0);
+    sims.push({item: it, sim, score});
   });
-}
-function renderSeed(index){
-  const v = MODEL.vectors[index].item;
-  seedThumb.textContent = (v.baseColour || '').slice(0,2).toUpperCase();
-  seedTitle.textContent = v.productDisplayName;
-  seedMeta.textContent = `${v.masterCategory} • ${v.subCategory} • ${v.articleType}`;
-  seedTags.innerHTML = '';
-  const tags = [`${v.baseColour}`, `${v.season}`, `${v.usage}`];
-  tags.forEach(t => {
-    const el = document.createElement('div'); el.className='tag'; el.textContent = t || 'UNKNOWN'; seedTags.appendChild(el);
-  });
+  sims.sort((a,b) => b.score - a.score);
+  return sims.slice(0, topN);
 }
 
-/* Recommendation logic */
-function recommendFromIndex(idx, k, alpha){
-  const seed = MODEL.vectors[idx];
-  // compute similarity to all others
-  const scores = MODEL.vectors.map((cand, j) => {
-    if(j === idx) return null;
-    const sim = cosine(seed.vec, cand.vec); // in [-1,1] but here non-negative
-    const combined = alpha * sim + (1 - alpha) * cand.popularityNorm;
-    return {index:j, sim, pop:cand.popularityNorm, score:combined, item:cand.item};
-  }).filter(Boolean);
-
-  // sort descending by score
-  scores.sort((a,b) => b.score - a.score);
-  return scores.slice(0,k);
+// ---------------- UI rendering ----------------
+function renderSeed(it){
+  document.getElementById('seed-title').innerText = it.productDisplayName || 'Untitled';
+  const meta = `${it.articleType||''} · ${it.subCategory||''} · ${it.baseColour||''} · ${it.usage||''} · ${it.year||''}`;
+  document.getElementById('seed-meta').innerText = meta;
+  document.getElementById('seed-image').innerText = (it.baseColour||'').split(' ')[0] || 'IMG';
 }
 
-/* Render recommendations in UI */
-function showRecs(list){
-  recsContainer.innerHTML = '';
-  list.forEach(r => {
-    const el = document.createElement('div'); el.className = 'rec-item';
-    const thumb = document.createElement('div'); thumb.className='thumb';
-    thumb.textContent = (r.item.baseColour || '').slice(0,2).toUpperCase();
-    const meta = document.createElement('div'); meta.className='meta';
-    const title = document.createElement('h3'); title.textContent = r.item.productDisplayName;
-    const sub = document.createElement('p'); sub.className='small-muted';
-    sub.textContent = `${r.item.masterCategory} • ${r.item.subCategory} • ${r.item.articleType}`;
-    const tagWrap = document.createElement('div'); tagWrap.className='tags';
-    const tags = reasonTags(MODEL.vectors[parseInt(seedSelect.value)].item, r.item);
-    tags.slice(0,4).forEach(t => { const d=document.createElement('div'); d.className='tag'; d.textContent=t; tagWrap.appendChild(d); });
-    const scoreEl = document.createElement('div'); scoreEl.className='score'; scoreEl.textContent = ` ${ (r.score).toFixed(3) }`;
-    meta.appendChild(title); meta.appendChild(sub); meta.appendChild(tagWrap);
-    el.appendChild(thumb); el.appendChild(meta); el.appendChild(scoreEl);
-    recsContainer.appendChild(el);
+function renderRecommendations(recs){
+  const grid = document.getElementById('rec-grid');
+  grid.innerHTML = '';
+  recs.forEach(r => {
+    const card = document.createElement('div'); card.className='card';
+    const h = document.createElement('h4'); h.innerText = r.item.productDisplayName || 'Untitled';
+    const p = document.createElement('p'); p.innerText = `${r.item.articleType || ''} • ${r.item.subCategory || ''} • ${r.item.baseColour || ''}`;
+    card.appendChild(h); card.appendChild(p);
+    // reason tags: check shared features
+    const tags = document.createElement('div'); tags.className='tags';
+    if(r.item.subCategory && r.item.subCategory === (document.getElementById('seed-meta').innerText.split('·')[1]||'').trim()) {
+      const t = document.createElement('div'); t.className='tag'; t.innerText='Shared: subCategory'; tags.appendChild(t);
+    }
+    if(r.item.baseColour && document.getElementById('seed-meta').innerText.includes(r.item.baseColour)) {
+      const t = document.createElement('div'); t.className='tag'; t.innerText='Shared: color'; tags.appendChild(t);
+    }
+    // similarity score
+    const sc = document.createElement('div'); sc.className='tag'; sc.innerText = 'score: ' + (r.score).toFixed(3);
+    tags.appendChild(sc);
+
+    card.appendChild(tags);
+    grid.appendChild(card);
   });
 }
 
-/* Events */
-alphaInput.addEventListener('input', e => {
-  alphaVal.textContent = parseFloat(e.target.value).toFixed(2);
-});
-btnRandom.addEventListener('click', () => {
-  const idx = Math.floor(Math.random() * MODEL.vectors.length);
-  seedSelect.value = idx;
-  renderSeed(idx);
-});
-btnRecommend.addEventListener('click', () => {
-  const idx = parseInt(seedSelect.value || 0);
-  const k = parseInt(kSelect.value || 5);
-  const alpha = parseFloat(alphaInput.value);
-  const recs = recommendFromIndex(idx, k, alpha);
-  showRecs(recs);
+// ---------------- Events ----------------
+document.getElementById('btn-rand').addEventListener('click', ()=>{
+  const ix = Math.floor(Math.random()*items.length);
+  renderSeed(items[ix]);
+  window._currentSeed = items[ix].id;
 });
 
-/* Init */
-populateSeedOptions();
-seedSelect.value = 0;
-renderSeed(0);
-seedSelect.addEventListener('change', () => renderSeed(parseInt(seedSelect.value)));
+document.getElementById('btn-recommend').addEventListener('click', ()=>{
+  const seedId = window._currentSeed || items[0].id;
+  const recs = recommend(seedId, 5);
+  renderRecommendations(recs);
+});
 
+document.getElementById('btn-reset').addEventListener('click', ()=>{
+  // reset to sample
+  items = items.slice(0,12); // original sample
+  computePopularity(items);
+  buildModel();
+  renderSeed(items[0]);
+  document.getElementById('rec-grid').innerHTML='';
+});
+
+document.getElementById('csv-upload').addEventListener('change', (ev)=>{
+  const f = ev.target.files[0];
+  if(!f) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const text = e.target.result;
+      const parsed = parseCSV(text);
+      if(parsed.length === 0){ alert('CSV parsed but no rows detected. Make sure header matches columns.'); return; }
+      // map parsed columns to expected ones (case-insensitive)
+      const mapped = parsed.map(row => {
+        const mapKey = k => {
+          const lower = k.toLowerCase().trim();
+          if(lower.includes('product')) return 'productDisplayName';
+          if(lower === 'id') return 'id';
+          if(lower.includes('master')) return 'masterCategory';
+          if(lower.includes('sub')) return 'subCategory';
+          if(lower.includes('article')) return 'articleType';
+          if(lower.includes('colour') || lower.includes('color')) return 'baseColour';
+          if(lower.includes('season')) return 'season';
+          if(lower.includes('year')) return 'year';
+          if(lower.includes('usage')) return 'usage';
+          if(lower.includes('gender')) return 'gender';
+          return null;
+        };
+        const out = {};
+        for(const k in row){
+          const mk = mapKey(k);
+          if(mk) out[mk] = row[k];
+        }
+        // ensure id exists
+        if(!out.id) out.id = Math.random().toString(36).slice(2,9);
+        return out;
+      });
+      items = mapped;
+      computePopularity(items);
+      buildModel();
+      renderSeed(items[0]);
+      document.getElementById('rec-grid').innerHTML='';
+      alert('Uploaded ' + items.length + ' rows. Now press Recommend.');
+    }catch(err){ alert('CSV load error: ' + err.message); }
+  };
+  reader.readAsText(f);
+});
+
+// ---------------- Initialize ----------------
+buildModel();
+renderSeed(items[0]);
 </script>
 </body>
 </html>
