@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Fashion RecSys — Prototype UI (Liquid Glass)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    /* Simple liquid-glass (glassmorphism) UI */
+    :root{
+      --bg: linear-gradient(135deg,#0f1724 0%, #0b2438 100%);
+      --glass: rgba(255,255,255,0.08);
+      --glass-2: rgba(255,255,255,0.06);
+      --accent: #6be7ff;
+      --accent-2: #8bd26f;
+      --card-radius: 14px;
+      --pad: 18px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      color: #ecf8ff;
+    }
+    html,body{height:100%;margin:0;background:var(--bg);-webkit-font-smoothing:antialiased;}
+    .app {
+      max-width:1100px;
+      margin:32px auto;
+      display:grid;
+      grid-template-columns: 320px 1fr 300px;
+      gap:20px;
+      padding:20px;
+    }
+
+    /* Glass card */
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+      border-radius: var(--card-radius);
+      padding:var(--pad);
+      box-shadow: 0 6px 30px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.02);
+      backdrop-filter: blur(8px) saturate(120%);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    h2 { margin:0 0 8px 0; font-size:18px; color:#e6f8ff; }
+    p.small { margin:6px 0 12px 0; font-size:13px; color:#cfeefc; }
+
+    /* Left product panel */
+    .product-list { display:flex; flex-direction:column; gap:12px; }
+    select, input[type="range"]{ width:100%; margin-top:8px; }
+    .product-card {
+      display:flex; gap:12px; align-items:center;
+    }
+    .avatar {
+      width:72px; height:72px; border-radius:10px;
+      background:linear-gradient(135deg,#0b3140, #063444);
+      box-shadow: inset 0 -6px 16px rgba(0,0,0,0.5);
+      display:flex; align-items:center; justify-content:center; font-weight:600;
+      font-size:12px; color:#bfefff; text-align:center; padding:8px;
+    }
+    .meta { font-size:13px; color:#dff9ff; }
+    .meta small { display:block; color:#bfe6ee; font-size:12px; margin-top:6px; }
+
+    /* Center recommendations */
+    .recs-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(180px,1fr)); gap:14px; }
+    .rec-item {
+      background: radial-gradient(1000px 400px at -10% -10%, rgba(255,255,255,0.02), transparent),
+                  linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+      padding:12px; border-radius:12px; position:relative; overflow:hidden;
+      border:1px solid rgba(255,255,255,0.04);
+    }
+    .rec-title { font-size:14px; color:#e9fbff; margin-bottom:8px; min-height:36px; }
+    .rec-info { font-size:12px; color:#cbeef3; margin-bottom:8px; }
+    .reason { font-size:12px; color:#0b2c2f; background: rgba(139,210,111,0.15); padding:6px 8px; border-radius:8px; display:inline-block; }
+    .score { position:absolute; right:10px; top:10px; font-weight:700; font-size:12px; color:var(--accent); }
+
+    .feedback { display:flex; gap:8px; margin-top:8px; }
+    .btn { padding:8px 10px; border-radius:8px; background: rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.04); color:#dff; cursor:pointer; font-size:13px; }
+    .btn.positive { background:linear-gradient(90deg, rgba(107,231,255,0.12), rgba(139,210,111,0.06)); border-color: rgba(139,210,111,0.12); color:#eafcf1; }
+    .small-muted { font-size:12px; color:#aedeef; margin-top:8px; }
+
+    /* Right controls */
+    label.kv { font-size:13px; color:#dff; display:block; margin-bottom:6px; }
+    .ctrl-row { margin-bottom:12px; }
+    .tag { display:inline-block; padding:6px 8px; border-radius:999px; background: rgba(255,255,255,0.03); font-size:12px; color:#cde; margin-right:6px; margin-bottom:6px; }
+
+    footer.note { text-align:center; margin-top:18px; color:#9fdae9; font-size:12px; }
+
+    /* responsive */
+    @media (max-width: 980px){
+      .app { grid-template-columns: 1fr; padding:12px; }
+      .card { padding:12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- LEFT: Choose target product -->
+    <div class="card">
+      <h2>Target product</h2>
+      <p class="small">Select a product to generate "You may also like" recommendations (content-based & item-item).</p>
+
+      <div class="product-list">
+        <div class="product-card">
+          <div class="avatar" id="prodAvatar">P1</div>
+          <div>
+            <div class="meta" id="prodTitle">Loading...</div>
+            <small id="prodMeta">meta</small>
+          </div>
+        </div>
+
+        <label class="kv">Choose product</label>
+        <select id="productSelect"></select>
+
+        <label class="kv">Top-N (candidates)</label>
+        <input id="topN" type="number" min="3" max="12" value="6" />
+
+        <label class="kv">Re-rank weight α (similarity)</label>
+        <input id="alpha" type="range" min="0" max="1" step="0.05" value="0.85" />
+        <div class="small-muted">Similarity weight: <span id="alphaVal">0.85</span></div>
+
+        <div style="margin-top:12px">
+          <button class="btn" id="btnRecalc">Recompute recommendations</button>
+        </div>
+
+        <div style="margin-top:16px">
+          <div class="small-muted">Quick legend:</div>
+          <div style="margin-top:6px">
+            <span class="tag">Cosine similarity</span>
+            <span class="tag">Popularity re-rank</span>
+            <span class="tag">Reason tags</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CENTER: Recommendations -->
+    <div class="card">
+      <h2>Recommendations</h2>
+      <p class="small">Top matched items from metadata. Each card shows a reason tag and score (blend of similarity & popularity).</p>
+
+      <div id="recs" class="recs-grid" aria-live="polite"></div>
+
+      <footer class="note">Prototype: content-based + item-item similarity. Explainable reason tags shown.</footer>
+    </div>
+
+    <!-- RIGHT: Controls & debug -->
+    <div class="card">
+      <h2>Controls & Info</h2>
+      <div class="ctrl-row">
+        <label class="kv">Dataset stats</label>
+        <div id="stats"></div>
+      </div>
+
+      <div class="ctrl-row">
+        <label class="kv">Similarity details</label>
+        <div class="small-muted">Cosine on concatenated features (one-hot + TF-IDF). Pop. fallback for cold-start.</div>
+      </div>
+
+      <div class="ctrl-row">
+        <label class="kv">Feedback</label>
+        <div class="small-muted">Use ♡ / Not relevant to collect signals (logged to console).</div>
+      </div>
+
+      <div style="margin-top:8px">
+        <button class="btn" id="btnShowVectors">Show vector dims (console)</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /**************************************************************************
+     * Simple browser-side content-based recommender demo
+     * - Uses small embedded dataset (metadata + simulated popularity)
+     * - Builds TF-IDF on productDisplayName and one-hot for categorical fields
+     * - Cosine similarity -> top-N -> re-rank by alpha * sim + (1-alpha) * popularity
+     * - Displays reason tags (shared category/color/etc)
+     *
+     * This is a lightweight prototype for the class method described in the slide.
+     **************************************************************************/
+
+    // 1) Small dataset (subset). Each item has metadata used by model.
+    const items = [
+      {id: "15970", gender:"Men", masterCategory:"Apparel", subCategory:"Topwear", articleType:"Shirts", baseColour:"Navy Blue", season:"Fall", year:2011, usage:"Casual", productDisplayName:"Turtle Check Men Navy Blue Shirt", popularity: 120},
+      {id: "39386", gender:"Men", masterCategory:"Apparel", subCategory:"Bottomwear", articleType:"Jeans", baseColour:"Blue", season:"Summer", year:2012, usage:"Casual", productDisplayName:"Peter England Men Party Blue Jeans", popularity: 230},
+      {id: "59263", gender:"Women", masterCategory:"Accessories", subCategory:"Watches", articleType:"Watches", baseColour:"Silver", season:"Winter", year:2016, usage:"Casual", productDisplayName:"Titan Women Silver Watch", popularity: 300},
+      {id: "21379", gender:"Men", masterCategory:"Apparel", subCategory:"Bottomwear", articleType:"Track Pants", baseColour:"Black", season:"Fall", year:2011, usage:"Casual", productDisplayName:"Manchester United Men Solid Black Track Pants", popularity: 95},
+      {id: "53759", gender:"Men", masterCategory:"Apparel", subCategory:"Topwear", articleType:"Tshirts", baseColour:"Grey", season:"Summer", year:2012, usage:"Casual", productDisplayName:"Puma Men Grey T-shirt", popularity: 410},
+      {id: "1855", gender:"Men", masterCategory:"Apparel", subCategory:"Topwear", articleType:"Tshirts", baseColour:"Grey", season:"Summer", year:2011, usage:"Casual", productDisplayName:"Inkfruit Mens Chain Reaction T-shirt", popularity: 70},
+      {id: "30805", gender:"Men", masterCategory:"Apparel", subCategory:"Topwear", articleType:"Shirts", baseColour:"Green", season:"Summer", year:2012, usage:"Ethnic", productDisplayName:"Fabindia Men Striped Green Shirt", popularity: 45},
+      {id: "26960", gender:"Women", masterCategory:"Apparel", subCategory:"Topwear", articleType:"Shirts", baseColour:"Purple", season:"Summer", year:2012, usage:"Casual", productDisplayName:"Jealous 21 Women Purple Shirt", popularity: 130},
+      {id: "29114", gender:"Men", masterCategory:"Accessories", subCategory:"Socks", articleType:"Socks", baseColour:"Navy Blue", season:"Summer", year:2012, usage:"Casual", productDisplayName:"Puma Men Pack of 3 Socks", popularity: 60},
+      {id: "30039", gender:"Men", masterCategory:"Accessories", subCategory:"Watches", articleType:"Watches", baseColour:"Black", season:"Winter", year:2016, usage:"Casual", productDisplayName:"Skagen Men Black Watch", popularity: 150},
+      {id: "9204", gender:"Men", masterCategory:"Footwear", subCategory:"Shoes", articleType:"Casual Shoes", baseColour:"Black", season:"Summer", year:2011, usage:"Casual", productDisplayName:"Puma Future Cat Remix SF Black Casual Shoes", popularity: 260}
+    ];
+
+    // Config: categorical fields used for one-hot
+    const categoricalFields = ["masterCategory","subCategory","articleType","season","usage","baseColour"];
+
+    // Utility: tokenize for TF-IDF (very simple)
+    function tokenize(text){
+      return (text || "").toLowerCase()
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .split(/\s+/)
+        .filter(t => t.length>1 && !["men","women","men's","women's"].includes(t));
+    }
+
+    // Build vocabulary (terms from productDisplayName)
+    const docs = items.map(it => tokenize(it.productDisplayName));
+    const vocab = {}; // term -> idx
+    const df = {}; // doc frequency
+    docs.forEach(tokens=>{
+      const seen = new Set();
+      tokens.forEach(t=>{
+        if(!(t in vocab)) vocab[t] = Object.keys(vocab).length;
+        if(!seen.has(t)){ df[t] = (df[t]||0)+1; seen.add(t); }
+      });
+    });
+    const V = Object.keys(vocab).length;
+    const N = items.length;
+    // Precompute IDF
+    const idf = {};
+    Object.keys(vocab).forEach(term=>{
+      idf[term] = Math.log(1 + N / ( (df[term]||0) )); // smoothed idf
+    });
+
+    // One-hot maps for categorical features
+    const catMaps = {};
+    categoricalFields.forEach(f=>{
+      const vals = Array.from(new Set(items.map(it=> (it[f]||"UNKNOWN").toString() )));
+      catMaps[f] = {};
+      vals.forEach((v,i)=> catMaps[f][v] = i);
+    });
+
+    // Build item vectors (concatenate one-hot parts and TF-IDF vector)
+    const featureVectors = []; // array of Float64Array
+    const vectorMeta = { // dims sizes for debug
+      catOffsets: {}, // start offset per categorical field
+      tfidfOffset: 0,
+      totalDim: 0
+    };
+
+    // compute offsets
+    let offset = 0;
+    categoricalFields.forEach(f=>{
+      vectorMeta.catOffsets[f] = {start: offset, size: Object.keys(catMaps[f]).length};
+      offset += Object.keys(catMaps[f]).length;
+    });
+    vectorMeta.tfidfOffset = offset;
+    offset += V;
+    vectorMeta.totalDim = offset;
+
+    // Helper: create zero vector
+    function zeroVec(n){ return new Float64Array(n); }
+
+    // Fill vectors
+    items.forEach((it, idx)=>{
+      const vec = zeroVec(vectorMeta.totalDim);
+      // one-hot categorical: set 1.0 at category position
+      categoricalFields.forEach(f=>{
+        const val = (it[f]||"UNKNOWN").toString();
+        const map = catMaps[f];
+        const pos = map[val];
+        if(pos !== undefined){
+          const off = vectorMeta.catOffsets[f].start + pos;
+          vec[off] = 1.0;
+        }
+      });
+      // TF-IDF: compute tf and multiply by idf
+      const tokens = tokenize(it.productDisplayName);
+      const tf = {};
+      tokens.forEach(t=> tf[t] = (tf[t]||0) + 1);
+      Object.keys(tf).forEach(t=>{
+        const idxv = vocab[t];
+        if(idxv !== undefined){
+          const tfidf = (tf[t] / tokens.length) * (idf[t] || 0);
+          vec[vectorMeta.tfidfOffset + idxv] = tfidf;
+        }
+      });
+      featureVectors.push(vec);
+    });
+
+    // Normalize vectors
+    function normVec(v){
+      let s=0; for(let i=0;i<v.length;i++){ s += v[i]*v[i]; } s = Math.sqrt(s) || 1.0;
+      const out = new Float64Array(v.length);
+      for(let i=0;i<v.length;i++) out[i] = v[i]/s;
+      return out;
+    }
+    const normalized = featureVectors.map(normVec);
+
+    // Cosine similarity helper (vectors are normalized -> dot product)
+    function cosineSim(i,j){
+      const a = normalized[i], b = normalized[j];
+      let s=0;
+      for(let k=0;k<a.length;k++) s += a[k]*b[k];
+      return s;
+    }
+
+    // Candidate generation: top-N by cosine similarity
+    function topNCandidates(itemIdx, N=6){
+      const sims = [];
+      for(let i=0;i<items.length;i++){
+        if(i===itemIdx) continue;
+        sims.push({idx:i, sim: cosineSim(itemIdx,i)});
+      }
+      sims.sort((x,y)=> y.sim - x.sim);
+      return sims.slice(0,N);
+    }
+
+    // Re-rank: blend similarity with popularity (normalized)
+    const popValues = items.map(it=> it.popularity || 1);
+    const maxPop = Math.max(...popValues);
+    const minPop = Math.min(...popValues);
+    function normPop(p){
+      if(maxPop===minPop) return 0.5;
+      return (p - minPop) / (maxPop - minPop);
+    }
+
+    function rerank(candidates, alpha){
+      return candidates.map(c=>{
+        const pop = normPop(items[c.idx].popularity || 0);
+        const final = alpha * c.sim + (1 - alpha) * pop;
+        return {...c, pop, final};
+      }).sort((a,b)=> b.final - a.final);
+    }
+
+    // Reason tag builder (simple: shared field matches)
+    function reasonTag(targetIdx, candIdx){
+      const t = items[targetIdx], c = items[candIdx];
+      const reasons = [];
+      if(t.masterCategory === c.masterCategory) reasons.push("category");
+      if(t.subCategory === c.subCategory) reasons.push("subCategory");
+      if(t.articleType === c.articleType) reasons.push("articleType");
+      if(t.baseColour === c.baseColour) reasons.push("color");
+      if(t.season === c.season) reasons.push("season");
+      return reasons.length ? "Similar: " + reasons.join(", ") : "Similar: metadata";
+    }
+
+    // UI: populate product select & stats
+    const sel = document.getElementById("productSelect");
+    items.forEach((it, idx)=>{
+      const opt = document.createElement("option");
+      opt.value = idx;
+      opt.textContent = `${it.productDisplayName} (${it.id})`;
+      sel.appendChild(opt);
+    });
+
+    function updateProductPanel(idx){
+      const it = items[idx];
+      document.getElementById("prodAvatar").textContent = it.id.slice(-3);
+      document.getElementById("prodTitle").textContent = it.productDisplayName;
+      document.getElementById("prodMeta").textContent = `${it.masterCategory} • ${it.subCategory} • ${it.baseColour} • ${it.usage}`;
+    }
+
+    function showStats(){
+      const stats = document.getElementById("stats");
+      const total = items.length;
+      const apparel = items.filter(i=> i.masterCategory==="Apparel").length;
+      stats.innerHTML = `<div class="tag">Items: ${total}</div> <div class="tag">Apparel: ${apparel}</div> <div class="tag">Vocab: ${V}</div>`;
+    }
+
+    // Render recommendations
+    function renderRecs(targetIdx, topN=6, alpha=0.85){
+      const recsContainer = document.getElementById("recs");
+      recsContainer.innerHTML = "";
+      let candidates = topNCandidates(targetIdx, Math.min(items.length-1, topN*3)); // more candidates to re-rank
+      candidates = rerank(candidates, alpha).slice(0, topN);
+      candidates.forEach(c=>{
+        const it = items[c.idx];
+        const card = document.createElement("div");
+        card.className = "rec-item";
+        card.innerHTML = `
+          <div class="score">${(c.final).toFixed(2)}</div>
+          <div class="rec-title">${it.productDisplayName}</div>
+          <div class="rec-info">${it.masterCategory} • ${it.subCategory} • ${it.baseColour}</div>
+          <div class="reason">${reasonTag(targetIdx, c.idx)}</div>
+          <div class="feedback">
+            <button class="btn positive" data-idx="${c.idx}">♡</button>
+            <button class="btn" data-idx="nr-${c.idx}">Not relevant</button>
+          </div>
+        `;
+        // attach feedback handlers
+        card.querySelectorAll('.feedback .btn').forEach(b=>{
+          b.addEventListener('click', (ev)=>{
+            if(b.classList.contains('positive')){
+              b.textContent = "Saved";
+            } else {
+              b.textContent = "Ignored";
+            }
+            console.log("Feedback:", {type: b.classList.contains('positive') ? "like" : "dislike", target: items[c.idx], from: items[targetIdx]});
+          });
+        });
+        recsContainer.appendChild(card);
+      });
+    }
+
+    // Wire up controls
+    document.getElementById("alpha").addEventListener("input", (e)=>{
+      document.getElementById("alphaVal").textContent = e.target.value;
+    });
+    document.getElementById("btnRecalc").addEventListener("click", ()=>{
+      const idx = parseInt(sel.value,10);
+      const topN = parseInt(document.getElementById("topN").value,10) || 6;
+      const alpha = parseFloat(document.getElementById("alpha").value);
+      renderRecs(idx, topN, alpha);
+    });
+
+    sel.addEventListener("change", ()=>{
+      const idx = parseInt(sel.value,10);
+      updateProductPanel(idx);
+    });
+
+    document.getElementById("btnShowVectors").addEventListener("click", ()=>{
+      console.log("Vector meta:", vectorMeta);
+      console.log("Sample normalized vector (item 0):", normalized[0]);
+      alert(`Total vector dimension: ${vectorMeta.totalDim} — check console for details.`);
+    });
+
+    // Init: select first product and render
+    sel.value = 0;
+    updateProductPanel(0);
+    showStats();
+    renderRecs(0, 6, parseFloat(document.getElementById("alpha").value));
+
+  </script>
+</body>
+</html>
