@@ -1,498 +1,465 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Fashion RecSys — Prototype UI (Liquid Glass)</title>
-<style>
-  :root{
-    --bg:#0f1724;
-    --card: rgba(255,255,255,0.06);
-    --card-strong: rgba(255,255,255,0.08);
-    --accent: rgba(255,255,255,0.14);
-    --glass-border: rgba(255,255,255,0.12);
-    --glass-highlight: rgba(255,255,255,0.04);
-    --text: #e6eef8;
-    --muted: #b7c2d6;
-    --accent-color: #8ad4ff;
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-  }
-  html,body{height:100%;margin:0;background:
-    radial-gradient(1200px 600px at 10% 10%, rgba(138,212,255,0.06), transparent 10%),
-    radial-gradient(800px 400px at 90% 90%, rgba(255,183,178,0.03), transparent 6%),
-    var(--bg);
-    color:var(--text);
-    -webkit-font-smoothing:antialiased;
-    -moz-osx-font-smoothing:grayscale;
-  }
-  .wrap{
-    min-height:100vh;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    padding:48px 20px;
-  }
-  .panel{
-    width:1100px;
-    max-width:100%;
-    display:grid;
-    grid-template-columns: 380px 1fr;
-    gap:28px;
-  }
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Fashion RecSys — Demo (Liquid Glass UI)</title>
+  <meta name="description" content="Small client-side content-based recommender demo — pick an item or random, choose count, get similar items."/>
+  <style>
+    /* ======= Liquid glass minimalist theme ======= */
+    :root{
+      --bg1: linear-gradient(135deg, rgba(7,20,33,1) 0%, rgba(18,28,40,1) 50%, rgba(6,18,30,1) 100%);
+      --glass: rgba(255,255,255,0.06);
+      --glass-2: rgba(255,255,255,0.045);
+      --accent: rgba(120,200,255,0.95);
+      --muted: rgba(255,255,255,0.75);
+      --radius: 14px;
+      --card-radius: 12px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
 
-  /* Liquid glass card style */
-  .glass{
-    background: linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0.01));
-    border-radius:18px;
-    padding:22px;
-    box-shadow: 0 8px 40px rgba(3,7,18,0.6), inset 0 1px 0 var(--glass-highlight);
-    border:1px solid var(--glass-border);
-    backdrop-filter: blur(8px) saturate(120%);
-    -webkit-backdrop-filter: blur(8px) saturate(120%);
-  }
+    html,body{
+      height:100%;
+      margin:0;
+      background: var(--bg1);
+      color: #eaf6ff;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:28px;
+      box-sizing:border-box;
+    }
 
-  /* Left column: controls + seed product */
-  .left{ display:flex; flex-direction:column; gap:18px; }
-  .logo{ font-weight:700; font-size:18px; color:var(--accent-color); letter-spacing:0.6px; }
-  .small{ font-size:13px; color:var(--muted); margin-top:6px; }
+    .stage{
+      width:100%;
+      max-width:1100px;
+      display:grid;
+      grid-template-columns: 420px 1fr;
+      gap:28px;
+      align-items:start;
+    }
 
-  .seed{
-    display:flex; gap:14px; align-items:center;
-  }
-  .seed-visual{
-    width:92px; height:92px; border-radius:12px;
-    background:linear-gradient(135deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-    display:flex; align-items:center; justify-content:center; font-weight:600;
-    color:var(--muted);
-    border:1px solid rgba(255,255,255,0.03);
-  }
-  .seed-info{ flex:1; }
-  .product-title{ font-weight:700; font-size:15px; color:var(--text); margin-bottom:6px; }
-  .meta{ font-size:13px; color:var(--muted); }
+    /* Left panel */
+    .panel{
+      background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015));
+      border-radius: var(--radius);
+      padding:22px;
+      backdrop-filter: blur(8px) saturate(120%);
+      border: 1px solid rgba(255,255,255,0.06);
+      box-shadow: 0 8px 30px rgba(2,6,12,0.6), inset 0 1px 0 rgba(255,255,255,0.02);
+    }
 
-  .controls{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-  button.btn{
-    background:linear-gradient(180deg, rgba(138,212,255,0.08), rgba(138,212,255,0.03));
-    color:var(--text); border:0; padding:10px 14px; border-radius:12px; cursor:pointer;
-    font-weight:600; letter-spacing:0.2px; box-shadow: 0 6px 18px rgba(10,16,37,0.45);
-    transition:transform .12s ease, box-shadow .12s ease;
-  }
-  button.btn.secondary{
-    background: transparent; border:1px solid rgba(255,255,255,0.04);
-  }
-  button.btn:active{ transform:translateY(1px); }
+    .brand{
+      display:flex;
+      gap:12px;
+      align-items:center;
+      margin-bottom:16px;
+    }
+    .logo{
+      width:56px;height:56px;border-radius:10px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+      display:flex;align-items:center;justify-content:center;
+      font-weight:700;color:var(--accent);font-size:20px;
+      box-shadow: 0 4px 18px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.02);
+    }
+    h1{
+      font-size:18px;margin:0;color:#f7fbff;
+      letter-spacing:-0.2px;
+    }
+    p.lead{ margin:6px 0 18px 0; color: #cfeeff; font-size:13px; opacity:0.95 }
 
-  .uploader{ font-size:13px; color:var(--muted); }
-  input[type=file]{ display:none; }
+    .controls { display:flex; flex-direction:column; gap:12px; }
 
-  /* Right column: recommendations */
-  .right{ display:flex; flex-direction:column; gap:10px; }
-  .topbar{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
-  .title{ font-size:20px; font-weight:700; color:var(--text); }
-  .subtitle{ font-size:13px; color:var(--muted); }
+    label{ font-size:13px; color: #bfeaff; margin-bottom:6px; display:block }
+    select, input[type=number]{
+      width:100%;
+      background: var(--glass-2);
+      border:1px solid rgba(255,255,255,0.04);
+      padding:10px 12px;
+      border-radius:10px;
+      color:var(--muted);
+      outline:none;
+      font-size:14px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+    }
+    .row { display:flex; gap:10px; align-items:center }
+    .btn {
+      display:inline-flex; align-items:center; justify-content:center;
+      background: linear-gradient(180deg, rgba(250,250,255,0.04), rgba(255,255,255,0.02));
+      color: white; border: none; padding:10px 14px; border-radius:10px;
+      cursor:pointer; font-weight:600; font-size:14px;
+      box-shadow: 0 6px 18px rgba(5,10,18,0.5);
+      transition: transform .12s ease, box-shadow .12s ease, opacity .12s;
+    }
+    .btn:active{ transform: translateY(1px) }
+    .btn.primary{
+      background: linear-gradient(90deg, rgba(120,200,255,0.14), rgba(120,200,255,0.08));
+      border: 1px solid rgba(120,200,255,0.18);
+      color: #dff8ff;
+    }
+    .btn.ghost{
+      background:transparent;border:1px dashed rgba(255,255,255,0.04); color:#bfeaff;
+    }
+    .small{ font-size:13px; padding:8px 10px }
 
-  .rec-grid{ display:grid; grid-template-columns: repeat(3, 1fr); gap:14px; margin-top:8px; }
-  .card{
-    padding:12px; border-radius:12px; min-height:130px;
-    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-    border:1px solid rgba(255,255,255,0.03);
-    display:flex; flex-direction:column; gap:8px;
-  }
-  .card h4{ margin:0; font-size:14px; color:var(--text); }
-  .card p{ margin:0; font-size:12px; color:var(--muted); line-height:1.25; }
-  .tags{ display:flex; gap:8px; flex-wrap:wrap; margin-top:auto; }
-  .tag{ font-size:11px; background:rgba(255,255,255,0.02); padding:6px 8px; border-radius:10px; color:var(--muted); border:1px solid rgba(255,255,255,0.02); }
+    .hint{ font-size:12px; color:#9fd6ff; opacity:0.9 }
 
-  .footer-note{ font-size:12px; color:var(--muted); margin-top:8px; }
+    /* Right area: recommendations + preview */
+    .stage-right{
+      display:flex; flex-direction:column; gap:18px;
+    }
 
-  /* mobile responsiveness */
-  @media (max-width:920px){
-    .panel{ grid-template-columns: 1fr; }
-    .rec-grid{ grid-template-columns: repeat(2, 1fr); }
-  }
-  @media (max-width:520px){
-    .rec-grid{ grid-template-columns: 1fr; }
-  }
-</style>
+    .preview{
+      padding:18px;
+      border-radius:var(--card-radius);
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border:1px solid rgba(255,255,255,0.04);
+      min-height:120px;
+      display:flex; gap:12px; align-items:center;
+      box-shadow: 0 8px 30px rgba(2,6,12,0.5);
+    }
+    .item-thumb{
+      width:96px;height:96px;border-radius:10px;background:linear-gradient(135deg, rgba(255,255,255,0.02), rgba(255,255,255,0.03));
+      display:flex;align-items:center;justify-content:center;font-weight:700;color:#e6f9ff;
+      font-size:12px;padding:8px;text-align:center;
+      border:1px solid rgba(255,255,255,0.03);
+    }
+    .item-meta{ color:#dff8ff; }
+    .meta-title{ font-weight:700; font-size:15px; margin-bottom:6px }
+    .meta-sub{ font-size:13px; opacity:0.9 }
+
+    .grid{
+      display:grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px,1fr));
+      gap:14px;
+    }
+
+    .card{
+      padding:12px; border-radius:12px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border:1px solid rgba(255,255,255,0.035);
+      min-height:130px;
+      display:flex; flex-direction:column; gap:8px;
+      justify-content:space-between;
+    }
+    .card .title{ font-weight:700; color:#eaffff; font-size:14px }
+    .card .meta{ font-size:12px; color:#bfeaff; opacity:0.95 }
+    .reason{
+      margin-top:8px;
+      font-size:12px;
+      padding:6px 8px;
+      border-radius:10px;
+      background: linear-gradient(90deg, rgba(120,200,255,0.06), rgba(120,200,255,0.02));
+      color:#dff8ff;
+      display:inline-block;
+    }
+
+    footer.small-note{ font-size:12px; color:#9fd6ff; opacity:0.85; margin-top:8px }
+
+    /* Responsive */
+    @media (max-width:980px){
+      .stage{ grid-template-columns: 1fr; max-width:900px }
+      .panel{ order:2 }
+      .stage-right{ order:1 }
+    }
+
+  </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="panel">
-    <!-- LEFT -->
-    <div class="glass left">
-      <div>
-        <div class="logo">Fashion RecSys (Prototype)</div>
-        <div class="small">Content-based item similarity • TF-IDF + categorical features • cosine similarity</div>
+  <div class="stage" role="application" aria-label="Fashion recommender demo">
+    <!-- Left control panel -->
+    <div class="panel" aria-hidden="false">
+      <div class="brand">
+        <div class="logo">FR</div>
+        <div>
+          <h1>Fashion RecSys — Demo</h1>
+          <p class="lead">Pick an item or randomize → choose count → get recommendations (client-side prototype).</p>
+        </div>
       </div>
 
-      <!-- Seed product -->
-      <div class="glass" style="padding:14px;">
-        <div class="seed">
-          <div class="seed-visual" id="seed-image">IMG</div>
-          <div class="seed-info">
-            <div class="product-title" id="seed-title">Turtle Check Men Navy Blue Shirt</div>
-            <div class="meta" id="seed-meta">Topwear · Shirts · Navy Blue · Casual · 2011</div>
-          </div>
+      <div class="controls" role="region" aria-label="Controls">
+        <div>
+          <label for="item-select">Select product</label>
+          <select id="item-select" aria-label="Select product"></select>
         </div>
 
-        <div style="height:12px"></div>
-
-        <div class="controls">
-          <button class="btn" id="btn-rand">Pick random seed</button>
-          <button class="btn" id="btn-recommend">Recommend</button>
-          <label class="btn secondary" title="Upload CSV">
-            Upload CSV
-            <input type="file" id="csv-upload" accept=".csv,text/csv" />
-          </label>
-          <button class="btn secondary" id="btn-reset">Reset sample</button>
+        <div>
+          <label for="count">Number of recommendations</label>
+          <input id="count" type="number" min="1" max="12" value="6" />
         </div>
 
-        <div style="height:14px"></div>
+        <div class="row">
+          <button id="random-btn" class="btn ghost small">Random item</button>
+          <button id="rec-btn" class="btn primary">Get recommendations</button>
+        </div>
 
-        <div class="uploader">Tip: upload your `styles.csv` (10 columns). UI will compute recommendations client-side.</div>
-      </div>
+        <div style="display:flex; gap:8px; align-items:center; margin-top:6px;">
+          <label style="margin:0; font-size:13px; color:#bfeaff">Similarity weight</label>
+          <input id="alpha" type="range" min="0" max="1" step="0.05" value="0.85" style="flex:1" />
+        </div>
 
-      <div style="height:10px"></div>
+        <div style="margin-top:12px">
+          <div class="hint">Alpha blends similarity & popularity. Higher = more like the selected item.</div>
+          <div class="hint">Reason tags explain why items are recommended.</div>
+        </div>
 
-      <div class="glass" style="padding:12px;">
-        <div style="font-size:13px;font-weight:700;color:var(--text)">How it works</div>
-        <div class="small">We build an item vector from categorical one-hots + TF-IDF on title, compute cosine similarity and show top-5 items. Re-rank uses a simple popularity fallback.</div>
+        <footer class="small-note">Static demo — no server. Built for prototype & course demo.</footer>
       </div>
     </div>
 
-    <!-- RIGHT -->
-    <div class="glass right">
-      <div class="topbar">
-        <div>
-          <div class="title">Recommendations</div>
-          <div class="subtitle">Top 5 similar items (reason tags indicate simple feature overlap).</div>
+    <!-- Right preview + recommendations -->
+    <div class="stage-right">
+      <div class="preview" id="preview" aria-live="polite">
+        <div class="item-thumb" id="preview-thumb">—</div>
+        <div class="item-meta">
+          <div class="meta-title" id="preview-title">Choose an item</div>
+          <div class="meta-sub" id="preview-sub">Then click "Get recommendations"</div>
         </div>
-        <div class="small" id="stats">Dataset: sample (12 items)</div>
       </div>
 
-      <div id="rec-grid" class="rec-grid">
-        <!-- recommended cards rendered here -->
+      <div>
+        <h3 style="margin:0 0 8px 0; color:#e8fbff">Recommendations</h3>
+        <div class="grid" id="rec-grid" aria-live="polite">
+          <!-- cards inserted here -->
+        </div>
       </div>
-
-      <div class="footer-note">Small prototype — replace sample data by uploading your dataset. All processing runs in browser.</div>
     </div>
   </div>
-</div>
 
-<script>
-/*
-  Minimal in-browser recommender:
-  - Sample dataset (replace or upload CSV)
-  - Build vocabulary and TF-IDF for productDisplayName
-  - Encode categorical features as simple one-hot indices (dynamically)
-  - Create sparse vectors as plain JS objects {index: value}
-  - Cosine similarity between sparse vectors
-  - Recommend top-N excluding the seed item
-  - Show simple reason tags (shared color/subCategory)
-*/
+  <script>
+    /* ====== Small in-memory dataset (representative subset) ======
+       Replace or extend this array with your full catalog JSON when deploying.
+    */
+    const ITEMS = [
+      { id:15970, gender:"Men", masterCategory:"Apparel", subCategory:"Topwear", articleType:"Shirts", baseColour:"Navy Blue", season:"Fall", year:2011, usage:"Casual", productDisplayName:"Turtle Check Men Navy Blue Shirt", popularity: 120 },
+      { id:39386, gender:"Men", masterCategory:"Apparel", subCategory:"Bottomwear", articleType:"Jeans", baseColour:"Blue", season:"Summer", year:2012, usage:"Casual", productDisplayName:"Peter England Men Party Blue Jeans", popularity: 300 },
+      { id:59263, gender:"Women", masterCategory:"Accessories", subCategory:"Watches", articleType:"Watches", baseColour:"Silver", season:"Winter", year:2016, usage:"Casual", productDisplayName:"Titan Women Silver Watch", popularity: 90 },
+      { id:21379, gender:"Men", masterCategory:"Apparel", subCategory:"Bottomwear", articleType:"Track Pants", baseColour:"Black", season:"Fall", year:2011, usage:"Casual", productDisplayName:"Manchester United Men Solid Black Track Pants", popularity: 210 },
+      { id:53759, gender:"Men", masterCategory:"Apparel", subCategory:"Topwear", articleType:"Tshirts", baseColour:"Grey", season:"Summer", year:2012, usage:"Casual", productDisplayName:"Puma Men Grey T-shirt", popularity: 260 },
+      { id:1855,  gender:"Men", masterCategory:"Apparel", subCategory:"Topwear", articleType:"Tshirts", baseColour:"Grey", season:"Summer", year:2011, usage:"Casual", productDisplayName:"Inkfruit Mens Chain Reaction T-shirt", popularity: 140 },
+      { id:30805, gender:"Men", masterCategory:"Apparel", subCategory:"Topwear", articleType:"Shirts", baseColour:"Green", season:"Summer", year:2012, usage:"Ethnic", productDisplayName:"Fabindia Men Striped Green Shirt", popularity: 60 },
+      { id:26960, gender:"Women", masterCategory:"Apparel", subCategory:"Topwear", articleType:"Shirts", baseColour:"Purple", season:"Summer", year:2012, usage:"Casual", productDisplayName:"Jealous 21 Women Purple Shirt", popularity: 80 },
+      { id:29114, gender:"Men", masterCategory:"Accessories", subCategory:"Socks", articleType:"Socks", baseColour:"Navy Blue", season:"Summer", year:2012, usage:"Casual", productDisplayName:"Puma Men Pack of 3 Socks", popularity: 55 },
+      { id:30039, gender:"Men", masterCategory:"Accessories", subCategory:"Watches", articleType:"Watches", baseColour:"Black", season:"Winter", year:2016, usage:"Casual", productDisplayName:"Skagen Men Black Watch", popularity: 70 },
+      { id:9204,  gender:"Men", masterCategory:"Footwear", subCategory:"Shoes", articleType:"Casual Shoes", baseColour:"Black", season:"Summer", year:2011, usage:"Casual", productDisplayName:"Puma Men Future Cat Remix SF Black Casual Shoes", popularity: 190 },
+      // add more items as needed (demo subset)
+    ];
 
-// ---------------- Sample dataset (small) ----------------
-let items = [
-  {"id":"15970","gender":"Men","masterCategory":"Apparel","subCategory":"Topwear","articleType":"Shirts","baseColour":"Navy Blue","season":"Fall","year":"2011","usage":"Casual","productDisplayName":"Turtle Check Men Navy Blue Shirt"},
-  {"id":"39386","gender":"Men","masterCategory":"Apparel","subCategory":"Bottomwear","articleType":"Jeans","baseColour":"Blue","season":"Summer","year":"2012","usage":"Casual","productDisplayName":"Peter England Men Party Blue Jeans"},
-  {"id":"59263","gender":"Women","masterCategory":"Accessories","subCategory":"Watches","articleType":"Watches","baseColour":"Silver","season":"Winter","year":"2016","usage":"Casual","productDisplayName":"Titan Women Silver Watch"},
-  {"id":"21379","gender":"Men","masterCategory":"Apparel","subCategory":"Bottomwear","articleType":"Track Pants","baseColour":"Black","season":"Fall","year":"2011","usage":"Casual","productDisplayName":"Manchester United Men Solid Black Track Pants"},
-  {"id":"53759","gender":"Men","masterCategory":"Apparel","subCategory":"Topwear","articleType":"Tshirts","baseColour":"Grey","season":"Summer","year":"2012","usage":"Casual","productDisplayName":"Puma Men Grey T-shirt"},
-  {"id":"1855","gender":"Men","masterCategory":"Apparel","subCategory":"Topwear","articleType":"Tshirts","baseColour":"Grey","season":"Summer","year":"2011","usage":"Casual","productDisplayName":"Inkfruit Mens Chain Reaction T-shirt"},
-  {"id":"30805","gender":"Men","masterCategory":"Apparel","subCategory":"Topwear","articleType":"Shirts","baseColour":"Green","season":"Summer","year":"2012","usage":"Ethnic","productDisplayName":"Fabindia Men Striped Green Shirt"},
-  {"id":"26960","gender":"Women","masterCategory":"Apparel","subCategory":"Topwear","articleType":"Shirts","baseColour":"Purple","season":"Summer","year":"2012","usage":"Casual","productDisplayName":"Jealous 21 Women Purple Shirt"},
-  {"id":"29114","gender":"Men","masterCategory":"Accessories","subCategory":"Socks","articleType":"Socks","baseColour":"Navy Blue","season":"Summer","year":"2012","usage":"Casual","productDisplayName":"Puma Men Pack of 3 Socks"},
-  {"id":"30039","gender":"Men","masterCategory":"Accessories","subCategory":"Watches","articleType":"Watches","baseColour":"Black","season":"Winter","year":"2016","usage":"Casual","productDisplayName":"Skagen Men Black Watch"},
-  {"id":"9204","gender":"Men","masterCategory":"Footwear","subCategory":"Shoes","articleType":"Casual Shoes","baseColour":"Black","season":"Summer","year":"2011","usage":"Casual","productDisplayName":"Puma Men Future Cat Remix SF Black Casual Shoes"},
-  {"id":"11111","gender":"Women","masterCategory":"Apparel","subCategory":"Bottomwear","articleType":"Jeans","baseColour":"Blue","season":"Summer","year":"2013","usage":"Casual","productDisplayName":"Levis Women Classic Blue Jeans"}
-];
+    /* ===== Helper functions ===== */
 
-// Popularity fallback: if you have a field with counts, map into popularity. For demo we compute popularity by product name frequency
-function computePopularity(items){
-  const freq = {};
-  items.forEach(it => { freq[it.productDisplayName] = (freq[it.productDisplayName]||0)+1; });
-  // normalize 0..1
-  const maxv = Math.max(...Object.values(freq));
-  items.forEach(it => it._popularity = (freq[it.productDisplayName]||0) / (maxv || 1));
-}
-computePopularity(items);
+    // token set from productDisplayName (simple normalization)
+    function tokens(text){
+      if(!text) return new Set();
+      return new Set(
+        text.toLowerCase()
+            .replace(/[^\w\s]/g,' ')
+            .split(/\s+/)
+            .filter(Boolean)
+            .map(t => t.trim())
+      );
+    }
 
-// ---------- Utility: CSV parser (handles quoted fields) ----------
-function parseCSV(text){
-  const rows = [];
-  const lines = text.split(/\r\n|\n/);
-  for(let r=0;r<lines.length;r++){
-    let line = lines[r];
-    if(!line) continue;
-    const cols = [];
-    let cur = "", inQuotes=false;
-    for(let i=0;i<line.length;i++){
-      const ch = line[i];
-      if(ch === '"' ){
-        if(inQuotes && line[i+1] === '"'){ cur += '"'; i++; continue; }
-        inQuotes = !inQuotes; continue;
+    // jaccard overlap between two token sets
+    function jaccard(aSet,bSet){
+      if(!aSet || !bSet) return 0;
+      const a = Array.from(aSet), b = new Set(bSet);
+      let inter = 0;
+      for(const x of a) if(b.has(x)) inter++;
+      const union = new Set([...a,...b]).size;
+      return union === 0 ? 0 : inter / union;
+    }
+
+    // compute basic similarity between two items
+    function similarity(a,b){
+      // weights for features (must sum to 1)
+      const weights = {
+        category: 0.30,   // masterCategory + subCategory + articleType combined
+        color: 0.20,      // baseColour
+        season: 0.05,
+        usage: 0.05,
+        text: 0.40        // productDisplayName token overlap (textual)
+      };
+
+      let catScore = 0;
+      if(a.masterCategory && b.masterCategory && a.masterCategory === b.masterCategory) catScore += 0.35;
+      if(a.subCategory && b.subCategory && a.subCategory === b.subCategory) catScore += 0.40;
+      if(a.articleType && b.articleType && a.articleType === b.articleType) catScore += 0.25;
+      catScore = Math.min(1, catScore); // normalize to [0,1]
+
+      const colorScore = (a.baseColour && b.baseColour && a.baseColour === b.baseColour) ? 1 : 0;
+      const seasonScore = (a.season && b.season && a.season === b.season) ? 1 : 0;
+      const usageScore = (a.usage && b.usage && a.usage === b.usage) ? 1 : 0;
+      const textScore = jaccard(tokens(a.productDisplayName), tokens(b.productDisplayName));
+
+      const sim = weights.category * catScore
+                + weights.color * colorScore
+                + weights.season * seasonScore
+                + weights.usage * usageScore
+                + weights.text * textScore;
+
+      return Number(sim.toFixed(4));
+    }
+
+    // compute final score: alpha * sim + (1-alpha) * norm_popularity
+    function finalScore(sim, pop, alpha){
+      // normalize popularity into [0,1] by simple min-max on current dataset
+      const popNorm = (pop - POP_MIN) / (POP_MAX - POP_MIN || 1);
+      return alpha * sim + (1 - alpha) * popNorm;
+    }
+
+    // generate human readable reason tag (top matched features)
+    function reasonTag(a,b){
+      const reasons = [];
+      if(a.masterCategory && b.masterCategory && a.masterCategory === b.masterCategory) reasons.push("category");
+      if(a.subCategory && b.subCategory && a.subCategory === b.subCategory) reasons.push("subCategory");
+      if(a.articleType && b.articleType && a.articleType === b.articleType) reasons.push("articleType");
+      if(a.baseColour && b.baseColour && a.baseColour === b.baseColour) reasons.push("color");
+      if(a.season && b.season && a.season === b.season) reasons.push("season");
+      const textOverlap = jaccard(tokens(a.productDisplayName), tokens(b.productDisplayName));
+      if(textOverlap > 0) reasons.push("title");
+      if(reasons.length === 0) return "Related";
+      return "Similar: " + reasons.slice(0,3).join(", ");
+    }
+
+    /* ===== Init: populate selects and compute pop min/max ===== */
+    const itemSelect = document.getElementById('item-select');
+    const previewThumb = document.getElementById('preview-thumb');
+    const previewTitle = document.getElementById('preview-title');
+    const previewSub = document.getElementById('preview-sub');
+    const recGrid = document.getElementById('rec-grid');
+    const recBtn = document.getElementById('rec-btn');
+    const randBtn = document.getElementById('random-btn');
+    const alphaRange = document.getElementById('alpha');
+
+    // popularity min/max for normalization
+    let POP_MIN = Infinity, POP_MAX = -Infinity;
+    ITEMS.forEach(i=>{
+      POP_MIN = Math.min(POP_MIN, i.popularity || 0);
+      POP_MAX = Math.max(POP_MAX, i.popularity || 0);
+    });
+
+    function fillItemSelect(){
+      itemSelect.innerHTML = "";
+      const opt = document.createElement('option');
+      opt.value = "";
+      opt.textContent = "Choose product...";
+      opt.disabled = true;
+      opt.selected = true;
+      itemSelect.appendChild(opt);
+
+      for(const it of ITEMS){
+        const o = document.createElement('option');
+        o.value = it.id;
+        o.textContent = `${it.productDisplayName} — ${it.subCategory} — ${it.baseColour || 'NA'}`;
+        itemSelect.appendChild(o);
       }
-      if(ch === ',' && !inQuotes){ cols.push(cur); cur=""; continue; }
-      cur += ch;
     }
-    cols.push(cur);
-    rows.push(cols);
-  }
-  // header
-  const header = rows[0].map(h=>h.trim());
-  const out = [];
-  for(let i=1;i<rows.length;i++){
-    const row = rows[i];
-    if(row.length === 0) continue;
-    const obj = {};
-    for(let j=0;j<header.length;j++){
-      obj[header[j]] = row[j] !== undefined ? row[j] : "";
+
+    function renderPreview(item){
+      if(!item){
+        previewThumb.textContent = "—";
+        previewTitle.textContent = "Choose an item";
+        previewSub.textContent = "Then click 'Get recommendations'";
+        return;
+      }
+      previewThumb.textContent = item.baseColour ? item.baseColour.split(" ").slice(0,2).join(" ") : "Item";
+      previewTitle.textContent = item.productDisplayName;
+      previewSub.textContent = `${item.masterCategory} · ${item.subCategory} · ${item.articleType} · popularity ${item.popularity || 0}`;
     }
-    out.push(obj);
-  }
-  return out;
-}
 
-// ---------------- Vectorizer (TF-IDF + categorical encoding) ----------------
-function tokenize(s){
-  if(!s) return [];
-  return s.toLowerCase().replace(/[^a-z0-9\u00C0-\u017F\s-]/g,' ').split(/\s+/).filter(Boolean);
-}
+    function recommendFrom(itemId, count = 6){
+      recGrid.innerHTML = "";
+      const anchor = ITEMS.find(x=>String(x.id) === String(itemId));
+      if(!anchor) return;
+      const alpha = parseFloat(alphaRange.value);
+      // compute similarity & final score for all other items
+      const candidates = ITEMS
+        .filter(x => String(x.id) !== String(anchor.id))
+        .map(x => {
+          const sim = similarity(anchor,x);
+          const score = finalScore(sim, x.popularity || 0, alpha);
+          return { item: x, sim, score, reason: reasonTag(anchor,x) };
+        })
+        .sort((a,b) => b.score - a.score)
+        .slice(0, Math.max(0, Math.min(12, count)));
 
-function buildVocabulary(docs){
-  const df = {};
-  docs.forEach(doc => {
-    const terms = new Set(tokenize(doc));
-    terms.forEach(t => df[t] = (df[t]||0)+1);
-  });
-  return df;
-}
+      // render cards
+      for(const c of candidates){
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <div>
+            <div class="title">${escapeHtml(c.item.productDisplayName)}</div>
+            <div class="meta">${escapeHtml(c.item.masterCategory)} · ${escapeHtml(c.item.subCategory)} · ${escapeHtml(c.item.baseColour || '')}</div>
+          </div>
+          <div>
+            <div class="reason">${escapeHtml(c.reason)} · score ${Number(c.score).toFixed(3)}</div>
+          </div>
+        `;
+        recGrid.appendChild(card);
+      }
 
-function computeTFIDF(docs){
-  const N = docs.length;
-  const df = buildVocabulary(docs);
-  const idf = {};
-  Object.keys(df).forEach(t => idf[t] = Math.log( (N + 1) / (df[t] + 1) ) + 1 );
-  const tfidfDocs = docs.map(doc => {
-    const tokens = tokenize(doc);
-    const tf = {};
-    tokens.forEach(t => tf[t] = (tf[t]||0) + 1);
-    const maxf = Math.max(...Object.values(tf), 1);
-    const vec = {};
-    Object.keys(tf).forEach(t => vec[t] = (tf[t]/maxf) * (idf[t] || 0));
-    return vec;
-  });
-  return {tfidfDocs, idf};
-}
+      // if not enough results, helpful note
+      if(candidates.length === 0){
+        const n = document.createElement('div');
+        n.className = 'card';
+        n.textContent = "No recommendations available.";
+        recGrid.appendChild(n);
+      }
+    }
 
-// Categorical encoder: map unique values to integer indices
-function buildCategoricalMaps(items, fields){
-  const maps = {};
-  fields.forEach(f => {
-    maps[f] = {};
-    let idx=0;
-    items.forEach(it => {
-      const v = (it[f]||"").toString().trim() || "UNKNOWN";
-      if(!(v in maps[f])){ maps[f][v] = idx++; }
+    function escapeHtml(s){
+      return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
+    }
+
+    /* ===== Events ===== */
+    fillItemSelect();
+    renderPreview(null);
+
+    itemSelect.addEventListener('change', (e)=>{
+      const id = e.target.value;
+      const it = ITEMS.find(x=>String(x.id)===String(id));
+      renderPreview(it);
     });
-  });
-  return maps;
-}
 
-// Build sparse vector as plain object {index:value}
-// We'll map categorical dims into ranges, and then add TF-IDF term dims keyed by string (prefixed)
-function buildVectors(items){
-  // prepare documents for TF-IDF
-  const docs = items.map(it => it.productDisplayName || "");
-  const {tfidfDocs, idf} = computeTFIDF(docs);
-  // categorical maps
-  const catFields = ['masterCategory','subCategory','articleType','baseColour','season','usage'];
-  const catMaps = buildCategoricalMaps(items, catFields);
-  // compute index base offsets
-  const offsets = {};
-  let base=0;
-  catFields.forEach(f => { offsets[f]=base; base += Object.keys(catMaps[f]).length; });
-  const tfPrefix = "T_"; // TF-IDF terms use string keys with prefix, keep them separate
-
-  // build vectors
-  items.forEach((it,i) => {
-    const vec = {}; // sparse
-    // categorical one-hot values
-    catFields.forEach(f => {
-      const v = (it[f]||"").toString().trim() || "UNKNOWN";
-      const idx = offsets[f] + (catMaps[f][v] !== undefined ? catMaps[f][v] : 0);
-      vec[idx] = 1; // binary presence
+    randBtn.addEventListener('click', ()=>{
+      const idx = Math.floor(Math.random()*ITEMS.length);
+      const it = ITEMS[idx];
+      itemSelect.value = it.id;
+      renderPreview(it);
     });
-    // TF-IDF terms (we will keep them under string keys)
-    const tfidf = tfidfDocs[i];
-    Object.keys(tfidf).forEach(term => {
-      vec[tfPrefix + term] = tfidf[term];
+
+    recBtn.addEventListener('click', ()=>{
+      const selected = itemSelect.value;
+      const count = parseInt(document.getElementById('count').value) || 6;
+      if(!selected){
+        // choose random if none selected
+        const idx = Math.floor(Math.random()*ITEMS.length);
+        const it = ITEMS[idx];
+        itemSelect.value = it.id;
+        renderPreview(it);
+        recommendFrom(it.id, count);
+        return;
+      }
+      recommendFrom(selected, count);
     });
-    // append popularity as a scalar dimension (use negative index name)
-    vec['_pop'] = it._popularity || 0;
-    it._vector = vec;
-  });
 
-  // return metadata so we can inspect offsets if needed
-  return {catFields, catMaps, offsets, idf};
-}
+    // quick keyboard accessibility: Enter triggers recommend
+    itemSelect.addEventListener('keydown', (ev)=>{
+      if(ev.key === 'Enter'){ recBtn.click(); }
+    });
 
-function dotSparse(a,b){
-  // a and b are objects; keys may be numeric or string; compute dot product
-  let s=0;
-  // iterate over smaller object
-  const aKeys = Object.keys(a);
-  const bKeys = Object.keys(b);
-  if(aKeys.length <= bKeys.length){
-    for(const k of aKeys){
-      if(b[k] !== undefined) s += a[k] * b[k];
-    }
-  } else {
-    for(const k of bKeys){
-      if(a[k] !== undefined) s += a[k] * b[k];
-    }
-  }
-  return s;
-}
-function normSparse(a){
-  let s=0;
-  for(const k in a) s += a[k]*a[k];
-  return Math.sqrt(s);
-}
-function cosine(a,b){
-  const num = dotSparse(a,b);
-  const na = normSparse(a);
-  const nb = normSparse(b);
-  if(na === 0 || nb===0) return 0;
-  return num/(na*nb);
-}
+    // show initial random recommendations for demo
+    (function initialDemo(){
+      const idx = Math.floor(Math.random()*ITEMS.length);
+      const it = ITEMS[idx];
+      itemSelect.value = it.id;
+      renderPreview(it);
+      recommendFrom(it.id, parseInt(document.getElementById('count').value));
+    })();
 
-// ---------------- Recommendation core ----------------
-let modelMeta = null;
-function buildModel(){
-  modelMeta = buildVectors(items);
-  document.getElementById('stats').innerText = `Dataset: ${items.length} items • Vocabulary size ≈ ${Object.keys(modelMeta.idf).length} terms`;
-}
-
-function recommend(seedId, topN=5){
-  const seed = items.find(it => it.id == seedId) || items[0];
-  if(!seed || !seed._vector) return [];
-  const sims = [];
-  items.forEach(it => {
-    if(it.id == seed.id) return;
-    const sim = cosine(seed._vector, it._vector);
-    // simple re-rank: combine sim and popularity (alpha=0.8)
-    const alpha = 0.85;
-    const score = alpha * sim + (1-alpha) * (it._popularity || 0);
-    sims.push({item: it, sim, score});
-  });
-  sims.sort((a,b) => b.score - a.score);
-  return sims.slice(0, topN);
-}
-
-// ---------------- UI rendering ----------------
-function renderSeed(it){
-  document.getElementById('seed-title').innerText = it.productDisplayName || 'Untitled';
-  const meta = `${it.articleType||''} · ${it.subCategory||''} · ${it.baseColour||''} · ${it.usage||''} · ${it.year||''}`;
-  document.getElementById('seed-meta').innerText = meta;
-  document.getElementById('seed-image').innerText = (it.baseColour||'').split(' ')[0] || 'IMG';
-}
-
-function renderRecommendations(recs){
-  const grid = document.getElementById('rec-grid');
-  grid.innerHTML = '';
-  recs.forEach(r => {
-    const card = document.createElement('div'); card.className='card';
-    const h = document.createElement('h4'); h.innerText = r.item.productDisplayName || 'Untitled';
-    const p = document.createElement('p'); p.innerText = `${r.item.articleType || ''} • ${r.item.subCategory || ''} • ${r.item.baseColour || ''}`;
-    card.appendChild(h); card.appendChild(p);
-    // reason tags: check shared features
-    const tags = document.createElement('div'); tags.className='tags';
-    if(r.item.subCategory && r.item.subCategory === (document.getElementById('seed-meta').innerText.split('·')[1]||'').trim()) {
-      const t = document.createElement('div'); t.className='tag'; t.innerText='Shared: subCategory'; tags.appendChild(t);
-    }
-    if(r.item.baseColour && document.getElementById('seed-meta').innerText.includes(r.item.baseColour)) {
-      const t = document.createElement('div'); t.className='tag'; t.innerText='Shared: color'; tags.appendChild(t);
-    }
-    // similarity score
-    const sc = document.createElement('div'); sc.className='tag'; sc.innerText = 'score: ' + (r.score).toFixed(3);
-    tags.appendChild(sc);
-
-    card.appendChild(tags);
-    grid.appendChild(card);
-  });
-}
-
-// ---------------- Events ----------------
-document.getElementById('btn-rand').addEventListener('click', ()=>{
-  const ix = Math.floor(Math.random()*items.length);
-  renderSeed(items[ix]);
-  window._currentSeed = items[ix].id;
-});
-
-document.getElementById('btn-recommend').addEventListener('click', ()=>{
-  const seedId = window._currentSeed || items[0].id;
-  const recs = recommend(seedId, 5);
-  renderRecommendations(recs);
-});
-
-document.getElementById('btn-reset').addEventListener('click', ()=>{
-  // reset to sample
-  items = items.slice(0,12); // original sample
-  computePopularity(items);
-  buildModel();
-  renderSeed(items[0]);
-  document.getElementById('rec-grid').innerHTML='';
-});
-
-document.getElementById('csv-upload').addEventListener('change', (ev)=>{
-  const f = ev.target.files[0];
-  if(!f) return;
-  const reader = new FileReader();
-  reader.onload = function(e){
-    try{
-      const text = e.target.result;
-      const parsed = parseCSV(text);
-      if(parsed.length === 0){ alert('CSV parsed but no rows detected. Make sure header matches columns.'); return; }
-      // map parsed columns to expected ones (case-insensitive)
-      const mapped = parsed.map(row => {
-        const mapKey = k => {
-          const lower = k.toLowerCase().trim();
-          if(lower.includes('product')) return 'productDisplayName';
-          if(lower === 'id') return 'id';
-          if(lower.includes('master')) return 'masterCategory';
-          if(lower.includes('sub')) return 'subCategory';
-          if(lower.includes('article')) return 'articleType';
-          if(lower.includes('colour') || lower.includes('color')) return 'baseColour';
-          if(lower.includes('season')) return 'season';
-          if(lower.includes('year')) return 'year';
-          if(lower.includes('usage')) return 'usage';
-          if(lower.includes('gender')) return 'gender';
-          return null;
-        };
-        const out = {};
-        for(const k in row){
-          const mk = mapKey(k);
-          if(mk) out[mk] = row[k];
-        }
-        // ensure id exists
-        if(!out.id) out.id = Math.random().toString(36).slice(2,9);
-        return out;
-      });
-      items = mapped;
-      computePopularity(items);
-      buildModel();
-      renderSeed(items[0]);
-      document.getElementById('rec-grid').innerHTML='';
-      alert('Uploaded ' + items.length + ' rows. Now press Recommend.');
-    }catch(err){ alert('CSV load error: ' + err.message); }
-  };
-  reader.readAsText(f);
-});
-
-// ---------------- Initialize ----------------
-buildModel();
-renderSeed(items[0]);
-</script>
+  </script>
 </body>
 </html>
